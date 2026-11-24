@@ -661,8 +661,15 @@
     let arcsRed = [];
     let texts = [];
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const dataUrl = urlParams.get('data') || '/drawings/rang_vector_data.json';
+    const customTitle = urlParams.get('title');
+    if (customTitle) {
+      document.title = `${customTitle} (AutoCAD Palette)`;
+    }
+
     // Bounding box toàn bộ bản vẽ
-    const BBOX = {
+    let BBOX = {
       minX: -148338.8,
       maxX: 267735.0,
       minY: -142527.0,
@@ -685,10 +692,13 @@
     });
 
     // LOAD VECTOR DATA
-    fetch('/drawings/rang_vector_data.json')
+    fetch(dataUrl)
       .then(res => res.json())
       .then(data => {
         cadData = data;
+        if (data.bbox) {
+          BBOX = data.bbox;
+        }
         linesWhite = new Float32Array(data.lines_white || data.lines);
         linesCyan = new Float32Array(data.lines_cyan || []);
         linesRed = new Float32Array(data.lines_red || []);
