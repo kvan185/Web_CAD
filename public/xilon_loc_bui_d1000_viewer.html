@@ -1,0 +1,1511 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bản Vẽ Vector Toàn Diện - xilon_loc_bui_d1000.dwg (AutoCAD Palette)</title>
+  <style>
+    :root {
+      --bg-autocad: #212830; /* Chuẩn màu nền Modelspace AutoCAD */
+      --panel: #1a2029;
+      --border: #333d4b;
+      --accent: #00e5ff;
+      --text: #ffffff;
+      --text-muted: #8e9cae;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg-autocad);
+      color: var(--text);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* VIEWPORT CANVAS */
+    #viewport-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      cursor: crosshair;
+      background: var(--bg-autocad);
+    }
+
+    #cad-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* MINIMAP GÓC TRÊN BÊN TRÁI (~1/5 MÀN HÌNH) */
+    #minimap-box {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      width: 20vw;
+      min-width: 220px;
+      max-width: 320px;
+      aspect-ratio: 16 / 9;
+      background: rgba(26, 32, 41, 0.92);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      z-index: 200;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    #minimap-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #minimap-viewport {
+      position: absolute;
+      border: 1.5px solid #ff3b30;
+      background: rgba(255, 59, 48, 0.22);
+      pointer-events: none;
+    }
+
+    .minimap-tag {
+      position: absolute;
+      bottom: 3px;
+      left: 6px;
+      font-size: 9px;
+      font-family: Consolas, ui-monospace, monospace;
+      color: rgba(255, 255, 255, 0.65);
+      pointer-events: none;
+      letter-spacing: 0.5px;
+    }
+
+    /* TOOLBAR CHỤP & IN */
+    #toolbar-actions {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 200;
+    }
+
+    .tool-btn {
+      background: rgba(26, 32, 41, 0.92);
+      border: 1px solid var(--border);
+      color: #e2e8f0;
+      padding: 7px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+      transition: all 0.15s ease;
+    }
+
+    .tool-btn:hover {
+      background: #2b3543;
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .tool-btn-primary {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+    }
+    .tool-btn-primary:hover {
+      background: #0369a1;
+      border-color: #7dd3fc;
+      color: #ffffff;
+    }
+
+    /* KHUNG QUÉT CHỌN VÙNG IN */
+    #selection-box {
+      display: none;
+      position: absolute;
+      border: 2px dashed #00e5ff;
+      background: rgba(0, 229, 255, 0.15);
+      pointer-events: none;
+      z-index: 250;
+    }
+
+    #selection-hint {
+      display: none;
+      position: absolute;
+      top: 64px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      color: #38bdf8;
+      border: 1px solid #0284c7;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      z-index: 260;
+      pointer-events: none;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+    }
+
+    /* MODAL PLOT TO PDF (AUTOCAD WEB STYLE) */
+    #plot-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 15, 23, 0.78);
+      backdrop-filter: blur(5px);
+      z-index: 1500;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #plot-modal {
+      background: #1e242d;
+      border: 1px solid #384252;
+      border-radius: 8px;
+      width: 760px;
+      max-width: 95vw;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+      overflow: hidden;
+      font-size: 13px;
+    }
+
+    .plot-header {
+      background: #171c23;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #2d3748;
+    }
+
+    .plot-header-title {
+      font-weight: 700;
+      font-size: 14px;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .plot-close-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 18px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .plot-close-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .plot-body {
+      display: flex;
+      padding: 18px;
+      gap: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .plot-settings {
+      flex: 1.1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .plot-field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .plot-field-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .plot-select {
+      background: #0f141c;
+      border: 1px solid #334155;
+      color: #f8fafc;
+      padding: 8px 10px;
+      border-radius: 5px;
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+    }
+    .plot-select:focus {
+      border-color: #00e5ff;
+    }
+
+    .plot-radio-group {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      background: #0f141c;
+      border: 1px solid #334155;
+      padding: 8px 12px;
+      border-radius: 5px;
+    }
+
+    .plot-radio-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #e2e8f0;
+    }
+
+    .plot-window-select-btn {
+      background: #0284c7;
+      color: #ffffff;
+      border: 1px solid #38bdf8;
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+      align-self: flex-start;
+    }
+    .plot-window-select-btn:hover {
+      background: #0369a1;
+    }
+
+    .plot-preview-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .plot-preview-container {
+      background: #0f141c;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      min-height: 250px;
+    }
+
+    #plot-preview-canvas {
+      max-width: 100%;
+      max-height: 230px;
+      background: #ffffff;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      border-radius: 2px;
+      display: block;
+    }
+
+    .plot-footer {
+      background: #171c23;
+      padding: 12px 18px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      border-top: 1px solid #2d3748;
+    }
+
+    .btn-plot-cancel {
+      background: transparent;
+      border: 1px solid #475569;
+      color: #cbd5e1;
+      padding: 8px 16px;
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-plot-cancel:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-plot-submit {
+      background: #0284c7;
+      border: 1px solid #38bdf8;
+      color: #ffffff;
+      padding: 8px 20px;
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.4);
+    }
+    .btn-plot-submit:hover {
+      background: #0369a1;
+    }
+
+
+    /* AUTOCAD CROSSHAIR */
+    .crosshair-h, .crosshair-v {
+      position: fixed;
+      pointer-events: none;
+      z-index: 999;
+    }
+    .crosshair-h {
+      height: 1px;
+      left: 0;
+      right: 0;
+      background: rgba(255, 255, 255, 0.35);
+    }
+    .crosshair-v {
+      width: 1px;
+      top: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    .pickbox {
+      position: fixed;
+      width: 7px;
+      height: 7px;
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      pointer-events: none;
+      z-index: 1000;
+      transform: translate(-50%, -50%);
+    }
+
+    /* AUTOCAD STATUS BAR */
+    #statusbar {
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+      padding: 4px 16px;
+      font-family: Consolas, ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+      letter-spacing: 0.3px;
+    }
+
+    .stat-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .stat-tag {
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
+    .stat-val {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* LOADING OVERLAY */
+    #loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(33, 40, 48, 0.9);
+      backdrop-filter: blur(6px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      z-index: 500;
+      transition: opacity 0.3s ease;
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(0, 229, 255, 0.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CROSSHAIR -->
+  <div class="crosshair-h" id="cross-h"></div>
+  <div class="crosshair-v" id="cross-v"></div>
+  <div class="pickbox" id="pickbox"></div>
+
+  <!-- LOADING -->
+  <div id="loading-overlay">
+    <div class="spinner"></div>
+    <div style="font-weight: 600; font-size: 13px; color: #ffffff;">Đang tải Vector Engine AutoCAD...</div>
+  </div>
+
+  <!-- VIEWPORT -->
+  <main id="viewport-container">
+    <canvas id="cad-canvas"></canvas>
+
+    <!-- MINIMAP GÓC TRÊN BÊN TRÁI (~1/5 MÀN HÌNH) -->
+    <div id="minimap-box" title="Click chuột trên Map để bay tới vùng đó">
+      <canvas id="minimap-canvas"></canvas>
+      <div id="minimap-viewport"></div>
+      <div class="minimap-tag">AUTOCAD OVERVIEW MAP</div>
+    </div>
+
+    <!-- HINT VÀ KHUNG QUÉT VÙNG IN -->
+    <div id="selection-box"></div>
+    <div id="selection-hint">Kéo chuột trên bản vẽ để quét vùng cần in (Nhấn Esc để hủy)</div>
+
+    <!-- TOOLBAR ACTIONS: AUTOCAD WEB STYLE -->
+    <div id="toolbar-actions">
+      <button class="tool-btn tool-btn-primary" id="btn-open-plot" title="Mở hộp thoại Plot to PDF chuẩn AutoCAD Web">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        Plot to PDF
+      </button>
+    </div>
+  </main>
+
+  <!-- MODAL PLOT TO PDF (AUTOCAD WEB APP) -->
+  <div id="plot-modal-overlay">
+    <div id="plot-modal">
+      <div class="plot-header">
+        <div class="plot-header-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          Plot to PDF (AutoCAD Web)
+        </div>
+        <button class="plot-close-btn" id="plot-modal-close" title="Đóng">✕</button>
+      </div>
+
+      <div class="plot-body">
+        <!-- CÀI ĐẶT BẢN IN -->
+        <div class="plot-settings">
+          <!-- VÙNG IN (WHAT TO PLOT) -->
+          <div class="plot-field">
+            <label class="plot-field-label">Vùng in (What to plot)</label>
+            <select id="plot-area-select" class="plot-select">
+              <option value="display">Display (Khung nhìn hiện tại)</option>
+              <option value="extents">Extents (Toàn bộ bản vẽ)</option>
+              <option value="window">Window (Quét chọn khung vùng)</option>
+            </select>
+            <div id="plot-window-action" style="display: none;">
+              <button class="plot-window-select-btn" id="btn-select-window-cad">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3M4 17v3h16v-3M9 12h6M12 9v6"/></svg>
+                Quét khung trên bản vẽ
+              </button>
+              <span id="window-selected-status" style="font-size: 11px; color: #38bdf8; margin-left: 8px;">Chưa quét vùng</span>
+            </div>
+          </div>
+
+          <!-- KIỂU IN (PLOT STYLE TABLE) -->
+          <div class="plot-field">
+            <label class="plot-field-label">Kiểu in (Plot style table / CTB)</label>
+            <select id="plot-style-select" class="plot-select">
+              <option value="monochrome.ctb">monochrome.ctb (Trắng đen chuẩn in kỹ thuật)</option>
+              <option value="acad.ctb">acad.ctb (Màu sắc theo đối tượng AutoCAD)</option>
+            </select>
+          </div>
+
+          <!-- KHỔ GIẤY (PAPER SIZE) -->
+          <div class="plot-field">
+            <label class="plot-field-label">Khổ giấy (Paper size)</label>
+            <select id="plot-paper-select" class="plot-select">
+              <option value="A4">ISO A4 (210 x 297 mm)</option>
+              <option value="A3">ISO A3 (297 x 420 mm)</option>
+            </select>
+          </div>
+
+          <!-- HƯỚNG GIẤY (ORIENTATION) -->
+          <div class="plot-field">
+            <label class="plot-field-label">Hướng trang in (Orientation)</label>
+            <div class="plot-radio-group">
+              <label class="plot-radio-label">
+                <input type="radio" name="plot-orientation" value="landscape" checked> Khổ ngang (Landscape)
+              </label>
+              <label class="plot-radio-label">
+                <input type="radio" name="plot-orientation" value="portrait"> Khổ dọc (Portrait)
+              </label>
+            </div>
+          </div>
+
+          <!-- TỶ LỆ IN (PLOT SCALE) -->
+          <div class="plot-field">
+            <label class="plot-radio-label" style="font-weight: 600; color: #cbd5e1;">
+              <input type="checkbox" id="plot-fit-check" checked disabled> Fit to paper (Tự động căn vừa khít trang giấy)
+            </label>
+          </div>
+        </div>
+
+        <!-- KHUNG XEM TRƯỚC (PREVIEW) -->
+        <div class="plot-preview-wrapper">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="plot-field-label">Xem trước (Preview)</div>
+            <button id="btn-reset-preview" style="background: transparent; border: 1px solid #475569; color: #94a3b8; font-size: 11px; border-radius: 4px; padding: 2px 7px; cursor: pointer;" title="Đặt lại vị trí căn giữa vừa vặn">↺ Căn giữa</button>
+          </div>
+          <div class="plot-preview-container">
+            <canvas id="plot-preview-canvas" width="340" height="240" style="cursor: grab;" title="Kéo chuột để di chuyển • Lăn chuột để phóng to/thu nhỏ • Nhấp đúp để căn vừa"></canvas>
+          </div>
+          <div style="font-size: 11px; color: #38bdf8; text-align: center;">🖱️ Kéo chuột để Pan • Lăn chuột để Zoom • Đúp chuột để Fit</div>
+        </div>
+      </div>
+
+      <div class="plot-footer">
+        <button class="btn-plot-cancel" id="btn-plot-cancel">Hủy</button>
+        <button class="btn-plot-submit" id="btn-plot-submit">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          Plot to PDF / In Ngay
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTOCAD STATUS BAR -->
+  <footer id="statusbar">
+    <div class="stat-group">
+      <div class="stat-tag">MODEL</div>
+      <div class="stat-tag">SNAP</div>
+      <div class="stat-tag">GRID</div>
+      <div class="stat-tag">ORTHO</div>
+      <div class="stat-tag">OSNAP</div>
+    </div>
+    <div class="stat-group">
+      <div>X: <span class="stat-val" id="stat-x">0.000</span></div>
+      <div>Y: <span class="stat-val" id="stat-y">0.000</span></div>
+      <div>Z: <span class="stat-val">0.000</span></div>
+      <div>SCALE: <span class="stat-val" id="stat-zoom">100%</span></div>
+    </div>
+  </footer>
+
+  <script>
+    const container = document.getElementById('viewport-container');
+    const canvas = document.getElementById('cad-canvas');
+    const ctx = canvas.getContext('2d');
+
+    const crossH = document.getElementById('cross-h');
+    const crossV = document.getElementById('cross-v');
+    const pickbox = document.getElementById('pickbox');
+    const statX = document.getElementById('stat-x');
+    const statY = document.getElementById('stat-y');
+    const statZoom = document.getElementById('stat-zoom');
+    const loading = document.getElementById('loading-overlay');
+
+    // MINIMAP ELEMENTS
+    const minimapBox = document.getElementById('minimap-box');
+    const minimapCanvas = document.getElementById('minimap-canvas');
+    const minimapCtx = minimapCanvas.getContext('2d');
+    const minimapViewport = document.getElementById('minimap-viewport');
+    let minimapScale = 1;
+    let minimapPanX = 0;
+    let minimapPanY = 0;
+
+    let scale = 0.003;
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+
+    let cadData = null;
+    let linesWhite = [];
+    let linesCyan = [];
+    let linesRed = [];
+    let circlesWhite = [];
+    let circlesRed = [];
+    let arcsWhite = [];
+    let arcsRed = [];
+    let texts = [];
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const dataUrl = urlParams.get('data') || '/drawings/xilon_loc_bui_d1000_vector.json';
+    const customTitle = urlParams.get('title');
+    if (customTitle) {
+      document.title = `${customTitle} (AutoCAD Palette)`;
+    }
+
+    // Bounding box toàn bộ bản vẽ
+    let BBOX = {
+      minX: -148338.8,
+      maxX: 267735.0,
+      minY: -142527.0,
+      maxY: 49311.9
+    };
+
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = container.clientWidth * dpr;
+      canvas.height = container.clientHeight * dpr;
+      canvas.style.width = container.clientWidth + 'px';
+      canvas.style.height = container.clientHeight + 'px';
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      requestAnimationFrame(render);
+    }
+
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+      drawMinimapBackground();
+    });
+
+    // LOAD VECTOR DATA
+    fetch(dataUrl)
+      .then(res => res.json())
+      .then(data => {
+        cadData = data;
+        if (data.bbox) {
+          BBOX = data.bbox;
+        }
+        linesWhite = new Float32Array(data.lines_white || data.lines);
+        linesCyan = new Float32Array(data.lines_cyan || []);
+        linesRed = new Float32Array(data.lines_red || []);
+
+        circlesWhite = new Float32Array(data.circles_white || data.circles);
+        circlesRed = new Float32Array(data.circles_red || []);
+
+        arcsWhite = new Float32Array(data.arcs_white || data.arcs);
+        arcsRed = new Float32Array(data.arcs_red || []);
+
+        texts = data.texts;
+
+        loading.style.opacity = '0';
+        setTimeout(() => loading.style.display = 'none', 300);
+
+        drawMinimapBackground();
+        zoomExtents();
+      })
+      .catch(err => {
+        console.error(err);
+        loading.innerHTML = '<div style="color:#ff3b30; font-weight:700;">Lỗi tải dữ liệu CAD Vector!</div>';
+      });
+
+    // AUTOCAD RENDER ENGINE
+    function render() {
+      if (!cadData) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      // Tọa độ CAD: Y hướng lên trên, Y Canvas hướng xuống dưới
+      ctx.translate(panX * dpr, panY * dpr);
+      ctx.scale(scale * dpr, -scale * dpr);
+
+      // Frustum culling (mm)
+      const viewMinX = -panX / scale;
+      const viewMaxX = (-panX + container.clientWidth) / scale;
+      const viewMinY = (panY - container.clientHeight) / scale;
+      const viewMaxY = panY / scale;
+
+      // 1. ĐƯỜNG TÂM TRỤC (Layer TAM: AutoCAD Red #ef4444 với nét gạch chấm CENTER2)
+      if (linesRed.length > 0 || circlesRed.length > 0 || arcsRed.length > 0) {
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = Math.max(0.65 / scale, 0.35);
+        ctx.setLineDash([16 / scale, 4 / scale, 3 / scale, 4 / scale]);
+
+        ctx.beginPath();
+        for (let i = 0; i < linesRed.length; i += 4) {
+          const x1 = linesRed[i], y1 = linesRed[i+1], x2 = linesRed[i+2], y2 = linesRed[i+3];
+          if (x1 < viewMinX && x2 < viewMinX) continue;
+          if (x1 > viewMaxX && x2 > viewMaxX) continue;
+          if (y1 < viewMinY && y2 < viewMinY) continue;
+          if (y1 > viewMaxY && y2 > viewMaxY) continue;
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+        }
+        for (let i = 0; i < circlesRed.length; i += 3) {
+          const cx = circlesRed[i], cy = circlesRed[i+1], r = circlesRed[i+2];
+          if (cx + r < viewMinX || cx - r > viewMaxX || cy + r < viewMinY || cy - r > viewMaxY) continue;
+          ctx.moveTo(cx + r, cy);
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        }
+        for (let i = 0; i < arcsRed.length; i += 5) {
+          const cx = arcsRed[i], cy = arcsRed[i+1], r = arcsRed[i+2];
+          const sa = arcsRed[i+3] * Math.PI / 180, ea = arcsRed[i+4] * Math.PI / 180;
+          if (cx + r < viewMinX || cx - r > viewMaxX || cy + r < viewMinY || cy - r > viewMaxY) continue;
+          ctx.moveTo(cx + r * Math.cos(sa), cy + r * Math.sin(sa));
+          ctx.arc(cx, cy, r, sa, ea);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]); // Bỏ nét đứt
+      }
+
+      // 2. HÌNH HỌC CHÍNH (Layer THANG / 0: AutoCAD Solid White #ffffff)
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(0.9 / scale, 0.45);
+      ctx.beginPath();
+      for (let i = 0; i < linesWhite.length; i += 4) {
+        const x1 = linesWhite[i], y1 = linesWhite[i+1], x2 = linesWhite[i+2], y2 = linesWhite[i+3];
+        if (x1 < viewMinX && x2 < viewMinX) continue;
+        if (x1 > viewMaxX && x2 > viewMaxX) continue;
+        if (y1 < viewMinY && y2 < viewMinY) continue;
+        if (y1 > viewMaxY && y2 > viewMaxY) continue;
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+      }
+      for (let i = 0; i < circlesWhite.length; i += 3) {
+        const cx = circlesWhite[i], cy = circlesWhite[i+1], r = circlesWhite[i+2];
+        if (cx + r < viewMinX || cx - r > viewMaxX || cy + r < viewMinY || cy - r > viewMaxY) continue;
+        ctx.moveTo(cx + r, cy);
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      }
+      for (let i = 0; i < arcsWhite.length; i += 5) {
+        const cx = arcsWhite[i], cy = arcsWhite[i+1], r = arcsWhite[i+2];
+        const sa = arcsWhite[i+3] * Math.PI / 180, ea = arcsWhite[i+4] * Math.PI / 180;
+        if (cx + r < viewMinX || cx - r > viewMaxX || cy + r < viewMinY || cy - r > viewMaxY) continue;
+        ctx.moveTo(cx + r * Math.cos(sa), cy + r * Math.sin(sa));
+        ctx.arc(cx, cy, r, sa, ea);
+      }
+      ctx.stroke();
+
+      // 3. ĐƯỜNG KÍCH THƯỚC & MŨI TÊN (Layer KT: AutoCAD Bright Cyan #00e5ff)
+      if (linesCyan.length > 0) {
+        ctx.strokeStyle = '#00e5ff';
+        ctx.lineWidth = Math.max(0.75 / scale, 0.35);
+        ctx.beginPath();
+        for (let i = 0; i < linesCyan.length; i += 4) {
+          const x1 = linesCyan[i], y1 = linesCyan[i+1], x2 = linesCyan[i+2], y2 = linesCyan[i+3];
+          if (x1 < viewMinX && x2 < viewMinX) continue;
+          if (x1 > viewMaxX && x2 > viewMaxX) continue;
+          if (y1 < viewMinY && y2 < viewMinY) continue;
+          if (y1 > viewMaxY && y2 > viewMaxY) continue;
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+        }
+        ctx.stroke();
+      }
+
+      // 4. VĂN BẢN VÀ CON SỐ KÍCH THƯỚC (AutoCAD Text Palette: Cyan / Yellow / White)
+      const lenT = texts.length;
+      for (let i = 0; i < lenT; i++) {
+        const item = texts[i];
+        const tx = item[0], ty = item[1], th = item[2], tstr = item[3], trot = item[4];
+        const halign = item[5] !== undefined ? item[5] : 0;
+        const valign = item[6] !== undefined ? item[6] : 0;
+        const colorType = item[7] !== undefined ? item[7] : 0;
+
+        if (th * scale < 2.0) continue;
+        const boundMargin = Math.max(3500, th * 25);
+        if (tx < viewMinX - boundMargin || tx > viewMaxX + boundMargin || ty < viewMinY - boundMargin || ty > viewMaxY + boundMargin) continue;
+
+        ctx.save();
+        ctx.translate(tx, ty);
+        ctx.scale(1, -1);
+        if (trot) ctx.rotate(-trot * Math.PI / 180);
+
+        ctx.textAlign = halign === 1 ? 'center' : (halign === 2 ? 'right' : 'left');
+        ctx.textBaseline = valign === 2 ? 'middle' : (valign === 3 ? 'top' : (valign === 1 ? 'bottom' : 'alphabetic'));
+
+        // Màu chuẩn AutoCAD: 1 = Cyan (kích thước), 2 = Vàng (ghi chú/tiêu đề), 0 = Trắng
+        ctx.fillStyle = (colorType === 1) ? '#00e5ff' : ((colorType === 2) ? '#facc15' : '#ffffff');
+        ctx.font = `${colorType === 2 ? 'bold ' : ''}${Math.max(10, th)}px sans-serif`;
+
+        if (tstr.includes('  ')) {
+          const linesTxt = tstr.split(/\s{2,}/);
+          linesTxt.forEach((l, idx) => {
+            ctx.fillText(l.trim(), 0, idx * (th * 1.3));
+          });
+        } else {
+          ctx.fillText(tstr, 0, 0);
+        }
+
+        ctx.restore();
+      }
+
+      ctx.restore();
+
+      statZoom.textContent = `${(scale * 1000).toFixed(1)}%`;
+      updateMinimapViewport();
+    }
+
+    // VẼ NỀN VECTOR MINIMAP (CHẠY 1 LẦN KHI LOAD HOẶC RESIZE)
+    function drawMinimapBackground() {
+      if (!cadData) return;
+      const mw = minimapBox.clientWidth;
+      const mh = minimapBox.clientHeight;
+      const dpr = window.devicePixelRatio || 1;
+      minimapCanvas.width = mw * dpr;
+      minimapCanvas.height = mh * dpr;
+
+      minimapCtx.save();
+      minimapCtx.setTransform(1, 0, 0, 1, 0, 0);
+      minimapCtx.clearRect(0, 0, minimapCanvas.width, minimapCanvas.height);
+
+      const cadW = BBOX.maxX - BBOX.minX;
+      const cadH = BBOX.maxY - BBOX.minY;
+      const scaleX = (mw * 0.92) / cadW;
+      const scaleY = (mh * 0.92) / cadH;
+      minimapScale = Math.min(scaleX, scaleY);
+
+      const midX = (BBOX.minX + BBOX.maxX) / 2;
+      const midY = (BBOX.minY + BBOX.maxY) / 2;
+      minimapPanX = mw / 2 - midX * minimapScale;
+      minimapPanY = mh / 2 + midY * minimapScale;
+
+      minimapCtx.translate(minimapPanX * dpr, minimapPanY * dpr);
+      minimapCtx.scale(minimapScale * dpr, -minimapScale * dpr);
+
+      // Vẽ hình học trắng mờ
+      minimapCtx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+      minimapCtx.lineWidth = 1.0 / minimapScale;
+      minimapCtx.beginPath();
+      for (let i = 0; i < linesWhite.length; i += 4) {
+        minimapCtx.moveTo(linesWhite[i], linesWhite[i+1]);
+        minimapCtx.lineTo(linesWhite[i+2], linesWhite[i+3]);
+      }
+      minimapCtx.stroke();
+
+      // Vẽ kích thước cyan mờ
+      minimapCtx.strokeStyle = 'rgba(0, 229, 255, 0.5)';
+      minimapCtx.beginPath();
+      for (let i = 0; i < linesCyan.length; i += 4) {
+        minimapCtx.moveTo(linesCyan[i], linesCyan[i+1]);
+        minimapCtx.lineTo(linesCyan[i+2], linesCyan[i+3]);
+      }
+      minimapCtx.stroke();
+
+      minimapCtx.restore();
+    }
+
+    // CẬP NHẬT VÙNG NHÌN ĐỎ TRÊN MINIMAP THEO THỜI GIAN THỰC
+    function updateMinimapViewport() {
+      if (!cadData) return;
+      const mw = minimapBox.clientWidth;
+      const mh = minimapBox.clientHeight;
+
+      const viewMinX = -panX / scale;
+      const viewMaxX = (-panX + container.clientWidth) / scale;
+      const viewMinY = (panY - container.clientHeight) / scale;
+      const viewMaxY = panY / scale;
+
+      const x0 = minimapPanX + viewMinX * minimapScale;
+      const y0 = minimapPanY - viewMaxY * minimapScale;
+      const w = (viewMaxX - viewMinX) * minimapScale;
+      const h = (viewMaxY - viewMinY) * minimapScale;
+
+      minimapViewport.style.left = `${Math.max(0, x0)}px`;
+      minimapViewport.style.top = `${Math.max(0, y0)}px`;
+      minimapViewport.style.width = `${Math.min(mw, Math.max(5, w))}px`;
+      minimapViewport.style.height = `${Math.min(mh, Math.max(5, h))}px`;
+    }
+
+    // CLICK TRÊN MINIMAP ĐỂ BAY TỚI BẤT KỲ VỊ TRÍ NÀO
+    minimapBox.addEventListener('click', (e) => {
+      const rect = minimapBox.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      const worldX = (clickX - minimapPanX) / minimapScale;
+      const worldY = (minimapPanY - clickY) / minimapScale;
+
+      panX = container.clientWidth / 2 - worldX * scale;
+      panY = container.clientHeight / 2 + worldY * scale;
+
+      render();
+    });
+
+    // ZOOM EXTENTS: Cân chỉnh toàn bộ bản vẽ vào màn hình
+    function zoomExtents() {
+      resizeCanvas();
+      const vpW = container.clientWidth;
+      const vpH = container.clientHeight;
+
+      const cadW = BBOX.maxX - BBOX.minX;
+      const cadH = BBOX.maxY - BBOX.minY;
+
+      const scaleX = (vpW * 0.94) / cadW;
+      const scaleY = (vpH * 0.94) / cadH;
+      scale = Math.min(scaleX, scaleY);
+
+      const midX = (BBOX.minX + BBOX.maxX) / 2;
+      const midY = (BBOX.minY + BBOX.maxY) / 2;
+
+      panX = vpW / 2 - midX * scale;
+      panY = vpH / 2 + midY * scale;
+
+      render();
+    }
+
+    // ZOOM WHEEL TẠI CON TRỎ CHUỘT
+    container.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.25 : 1 / 1.25;
+      const newScale = Math.max(0.00001, Math.min(5.0, scale * zoomFactor));
+
+      const rect = container.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      panX = mouseX - (mouseX - panX) * (newScale / scale);
+      panY = mouseY - (mouseY - panY) * (newScale / scale);
+      scale = newScale;
+
+      render();
+    }, { passive: false });
+
+    // ==========================================
+    // LOGIC PLOT TO PDF (CHUẨN AUTOCAD WEB APP)
+    // ==========================================
+    const plotModalOverlay = document.getElementById('plot-modal-overlay');
+    const btnOpenPlot = document.getElementById('btn-open-plot');
+    const plotModalClose = document.getElementById('plot-modal-close');
+    const btnPlotCancel = document.getElementById('btn-plot-cancel');
+    const btnPlotSubmit = document.getElementById('btn-plot-submit');
+
+    const plotAreaSelect = document.getElementById('plot-area-select');
+    const plotWindowAction = document.getElementById('plot-window-action');
+    const btnSelectWindowCad = document.getElementById('btn-select-window-cad');
+    const windowSelectedStatus = document.getElementById('window-selected-status');
+    const plotStyleSelect = document.getElementById('plot-style-select');
+    const plotPaperSelect = document.getElementById('plot-paper-select');
+    const plotPreviewCanvas = document.getElementById('plot-preview-canvas');
+    const previewCtx = plotPreviewCanvas.getContext('2d');
+
+    const selBox = document.getElementById('selection-box');
+    const selHint = document.getElementById('selection-hint');
+
+    let customWindowCad = null;
+    let isWindowPlotting = false;
+    let isSelectingWindow = false;
+    let selStartX = 0;
+    let selStartY = 0;
+
+    // MỞ / ĐÓNG MODAL
+    btnOpenPlot.addEventListener('click', () => {
+      plotModalOverlay.style.display = 'flex';
+      updatePlotPreview();
+    });
+
+    plotModalClose.addEventListener('click', () => {
+      plotModalOverlay.style.display = 'none';
+    });
+
+    btnPlotCancel.addEventListener('click', () => {
+      plotModalOverlay.style.display = 'none';
+    });
+
+    plotModalOverlay.addEventListener('click', (e) => {
+      if (e.target === plotModalOverlay) {
+        plotModalOverlay.style.display = 'none';
+      }
+    });
+
+    // THAY ĐỔI CÁC THÔNG SỐ CÀI ĐẶT
+    plotAreaSelect.addEventListener('change', () => {
+      if (plotAreaSelect.value === 'window') {
+        plotWindowAction.style.display = 'block';
+      } else {
+        plotWindowAction.style.display = 'none';
+      }
+      updatePlotPreview();
+    });
+
+    plotStyleSelect.addEventListener('change', updatePlotPreview);
+    plotPaperSelect.addEventListener('change', updatePlotPreview);
+    document.querySelectorAll('input[name="plot-orientation"]').forEach(r => {
+      r.addEventListener('change', updatePlotPreview);
+    });
+
+    // CHỌN VÙNG WINDOW TRÊN BẢN VẼ
+    btnSelectWindowCad.addEventListener('click', () => {
+      plotModalOverlay.style.display = 'none';
+      isWindowPlotting = true;
+      selHint.style.display = 'block';
+      container.style.cursor = 'crosshair';
+    });
+
+    function cancelWindowPlot() {
+      isWindowPlotting = false;
+      isSelectingWindow = false;
+      selBox.style.display = 'none';
+      selHint.style.display = 'none';
+      container.style.cursor = 'crosshair';
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (isWindowPlotting) {
+          cancelWindowPlot();
+          plotModalOverlay.style.display = 'flex';
+        } else if (plotModalOverlay.style.display === 'flex') {
+          plotModalOverlay.style.display = 'none';
+        }
+      }
+    });
+
+    // SỰ KIỆN CHUỘT: PAN HOẶC QUÉT VÙNG IN
+    container.addEventListener('mousedown', (e) => {
+      if (isWindowPlotting) {
+        if (e.button === 0) {
+          isSelectingWindow = true;
+          selStartX = e.clientX;
+          selStartY = e.clientY;
+          selBox.style.left = selStartX + 'px';
+          selBox.style.top = selStartY + 'px';
+          selBox.style.width = '0px';
+          selBox.style.height = '0px';
+          selBox.style.display = 'block';
+        }
+        return;
+      }
+
+      if (e.button === 0 || e.button === 1) {
+        isDragging = true;
+        startX = e.clientX - panX;
+        startY = e.clientY - panY;
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      crossH.style.top = e.clientY + 'px';
+      crossV.style.left = e.clientX + 'px';
+      pickbox.style.left = e.clientX + 'px';
+      pickbox.style.top = e.clientY + 'px';
+
+      const rect = container.getBoundingClientRect();
+      const relX = e.clientX - rect.left;
+      const relY = e.clientY - rect.top;
+
+      const cadX = Math.round((relX - panX) / scale);
+      const cadY = Math.round((panY - relY) / scale);
+      statX.textContent = `${cadX}.000`;
+      statY.textContent = `${cadY}.000`;
+
+      if (isSelectingWindow) {
+        const left = Math.min(selStartX, e.clientX);
+        const top = Math.min(selStartY, e.clientY);
+        const width = Math.abs(e.clientX - selStartX);
+        const height = Math.abs(e.clientY - selStartY);
+
+        selBox.style.left = left + 'px';
+        selBox.style.top = top + 'px';
+        selBox.style.width = width + 'px';
+        selBox.style.height = height + 'px';
+        return;
+      }
+
+      if (isDragging) {
+        panX = e.clientX - startX;
+        panY = e.clientY - startY;
+        render();
+      }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (isSelectingWindow) {
+        const left = Math.min(selStartX, e.clientX);
+        const top = Math.min(selStartY, e.clientY);
+        const width = Math.abs(e.clientX - selStartX);
+        const height = Math.abs(e.clientY - selStartY);
+
+        cancelWindowPlot();
+
+        if (width > 20 && height > 20) {
+          const rect = container.getBoundingClientRect();
+          const scX1 = left - rect.left;
+          const scX2 = scX1 + width;
+          const scY1 = top - rect.top;
+          const scY2 = scY1 + height;
+
+          const cadMinX = (scX1 - panX) / scale;
+          const cadMaxX = (scX2 - panX) / scale;
+          const cadMinY = (panY - scY2) / scale;
+          const cadMaxY = (panY - scY1) / scale;
+
+          customWindowCad = { minX: cadMinX, maxX: cadMaxX, minY: cadMinY, maxY: cadMaxY };
+          windowSelectedStatus.textContent = `Đã quét: ${Math.round(cadMaxX - cadMinX)} x ${Math.round(cadMaxY - cadMinY)} mm`;
+        }
+
+        plotModalOverlay.style.display = 'flex';
+        updatePlotPreview();
+        return;
+      }
+      isDragging = false;
+    });
+
+    container.addEventListener('dblclick', zoomExtents);
+
+    // ==========================================
+    // TƯƠNG TÁC PAN / ZOOM TRÊN KHUNG PREVIEW
+    // ==========================================
+    let previewUserOffsetX = 0; // CAD mm
+    let previewUserOffsetY = 0; // CAD mm
+    let previewUserZoom = 1.0;
+    let isPreviewDragging = false;
+    let prevMouseX = 0;
+    let prevMouseY = 0;
+
+    plotPreviewCanvas.addEventListener('mousedown', (e) => {
+      if (e.button === 0) {
+        isPreviewDragging = true;
+        prevMouseX = e.clientX;
+        prevMouseY = e.clientY;
+        plotPreviewCanvas.style.cursor = 'grabbing';
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (isPreviewDragging) {
+        const dx = e.clientX - prevMouseX;
+        const dy = e.clientY - prevMouseY;
+        prevMouseX = e.clientX;
+        prevMouseY = e.clientY;
+
+        const bbox = getSelectedPlotBBox();
+        const cadW = Math.abs(bbox.maxX - bbox.minX);
+        const cadH = Math.abs(bbox.maxY - bbox.minY);
+        const isLandscape = document.querySelector('input[name="plot-orientation"]:checked').value === 'landscape';
+        const pw = isLandscape ? 340 : 240;
+        const ph = isLandscape ? 240 : 340;
+        const baseScale = Math.min((pw - 32) / cadW, (ph - 32) / cadH);
+        const pScale = baseScale * previewUserZoom;
+
+        // Y trong CAD ngược hướng với pixel màn hình
+        previewUserOffsetX -= dx / pScale;
+        previewUserOffsetY += dy / pScale;
+
+        updatePlotPreview(false);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isPreviewDragging) {
+        isPreviewDragging = false;
+        plotPreviewCanvas.style.cursor = 'grab';
+      }
+    });
+
+    plotPreviewCanvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      previewUserZoom = Math.max(0.2, Math.min(10.0, previewUserZoom * zoomFactor));
+      updatePlotPreview(false);
+    }, { passive: false });
+
+    plotPreviewCanvas.addEventListener('dblclick', () => {
+      previewUserOffsetX = 0;
+      previewUserOffsetY = 0;
+      previewUserZoom = 1.0;
+      updatePlotPreview(false);
+    });
+
+    document.getElementById('btn-reset-preview').addEventListener('click', () => {
+      previewUserOffsetX = 0;
+      previewUserOffsetY = 0;
+      previewUserZoom = 1.0;
+      updatePlotPreview(false);
+    });
+
+    // LẤY BẬC TỌA ĐỘ THEO CÀI ĐẶT
+    function getSelectedPlotBBox() {
+      const area = plotAreaSelect.value;
+      if (area === 'extents') {
+        return { minX: BBOX.minX, maxX: BBOX.maxX, minY: BBOX.minY, maxY: BBOX.maxY };
+      } else if (area === 'window' && customWindowCad) {
+        return customWindowCad;
+      } else {
+        // Display (mặc định)
+        const viewMinX = -panX / scale;
+        const viewMaxX = (-panX + container.clientWidth) / scale;
+        const viewMinY = (panY - container.clientHeight) / scale;
+        const viewMaxY = panY / scale;
+        return { minX: viewMinX, maxX: viewMaxX, minY: viewMinY, maxY: viewMaxY };
+      }
+    }
+
+    // CẬP NHẬT KHUNG XEM TRƯỚC (PREVIEW)
+    function updatePlotPreview(resetTransform = false) {
+      if (!cadData) return;
+      if (resetTransform) {
+        previewUserOffsetX = 0;
+        previewUserOffsetY = 0;
+        previewUserZoom = 1.0;
+      }
+
+      const bbox = getSelectedPlotBBox();
+      const isLandscape = document.querySelector('input[name="plot-orientation"]:checked').value === 'landscape';
+      const isMonochrome = plotStyleSelect.value === 'monochrome.ctb';
+
+      const pw = isLandscape ? 340 : 240;
+      const ph = isLandscape ? 240 : 340;
+      plotPreviewCanvas.width = pw;
+      plotPreviewCanvas.height = ph;
+
+      previewCtx.fillStyle = '#ffffff';
+      previewCtx.fillRect(0, 0, pw, ph);
+
+      renderCadToTargetContext(previewCtx, pw, ph, bbox, isMonochrome, 16, previewUserOffsetX, previewUserOffsetY, previewUserZoom);
+    }
+
+    // BẤM NÚT "PLOT TO PDF"
+    btnPlotSubmit.addEventListener('click', () => {
+      const bbox = getSelectedPlotBBox();
+      const isLandscape = document.querySelector('input[name="plot-orientation"]:checked').value === 'landscape';
+      const isMonochrome = plotStyleSelect.value === 'monochrome.ctb';
+      const paper = plotPaperSelect.value; // 'A4' or 'A3'
+
+      plotModalOverlay.style.display = 'none';
+
+      // 300 DPI Canvas
+      const printW = paper === 'A3' ? (isLandscape ? 4960 : 3508) : (isLandscape ? 3508 : 2480);
+      const printH = paper === 'A3' ? (isLandscape ? 3508 : 4960) : (isLandscape ? 2480 : 3508);
+
+      const offscreen = document.createElement('canvas');
+      offscreen.width = printW;
+      offscreen.height = printH;
+      const octx = offscreen.getContext('2d');
+
+      octx.fillStyle = '#ffffff';
+      octx.fillRect(0, 0, printW, printH);
+
+      renderCadToTargetContext(octx, printW, printH, bbox, isMonochrome, 120, previewUserOffsetX, previewUserOffsetY, previewUserZoom);
+
+      const dataURL = offscreen.toDataURL('image/png');
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        alert('Vui lòng cho phép popup để mở trang In.');
+        return;
+      }
+
+      printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Plot to PDF - AutoCAD Web (${paper} ${isLandscape ? 'Landscape' : 'Portrait'})</title>
+  <style>
+    @page {
+      size: ${paper} ${isLandscape ? 'landscape' : 'portrait'};
+      margin: 0;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    @media print {
+      body { background: #ffffff !important; }
+      img { width: 100%; height: 100%; object-fit: contain; }
+    }
+  </style>
+</head>
+<body>
+  <img src="${dataURL}" id="print-sheet" />
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.focus();
+        window.print();
+      }, 300);
+    };
+  <\/script>
+</body>
+</html>`);
+      printWindow.document.close();
+    });
+
+    // HÀM VẼ VECTOR DÙNG CHUNG (CHO CẢ PREVIEW VÀ BẢN IN 300 DPI)
+    function renderCadToTargetContext(targetCtx, targetW, targetH, rectCad, isMonochrome, marginPad, userOffsetX = 0, userOffsetY = 0, userZoom = 1.0) {
+      const cadW = Math.abs(rectCad.maxX - rectCad.minX);
+      const cadH = Math.abs(rectCad.maxY - rectCad.minY);
+      if (cadW <= 0 || cadH <= 0) return;
+
+      const drawW = targetW - marginPad * 2;
+      const drawH = targetH - marginPad * 2;
+      const baseScale = Math.min(drawW / cadW, drawH / cadH);
+      const pScale = baseScale * userZoom;
+
+      const midX = (rectCad.minX + rectCad.maxX) / 2 + userOffsetX;
+      const midY = (rectCad.minY + rectCad.maxY) / 2 + userOffsetY;
+
+      const pPanX = targetW / 2 - midX * pScale;
+      const pPanY = targetH / 2 + midY * pScale;
+
+      targetCtx.save();
+      targetCtx.translate(pPanX, pPanY);
+      targetCtx.scale(pScale, -pScale);
+
+      const strokeWhite = isMonochrome ? '#000000' : '#111827';
+      const strokeCyan  = isMonochrome ? '#000000' : '#0284c7';
+      const strokeRed   = isMonochrome ? '#333333' : '#dc2626';
+
+      // 1. Centerlines
+      if (linesRed.length > 0 || circlesRed.length > 0 || arcsRed.length > 0) {
+        targetCtx.strokeStyle = strokeRed;
+        targetCtx.lineWidth = Math.max(0.65 / pScale, 0.45);
+        targetCtx.setLineDash([16 / pScale, 4 / pScale, 3 / pScale, 4 / pScale]);
+
+        targetCtx.beginPath();
+        for (let i = 0; i < linesRed.length; i += 4) {
+          const x1 = linesRed[i], y1 = linesRed[i+1], x2 = linesRed[i+2], y2 = linesRed[i+3];
+          if (x1 < rectCad.minX && x2 < rectCad.minX) continue;
+          if (x1 > rectCad.maxX && x2 > rectCad.maxX) continue;
+          if (y1 < rectCad.minY && y2 < rectCad.minY) continue;
+          if (y1 > rectCad.maxY && y2 > rectCad.maxY) continue;
+          targetCtx.moveTo(x1, y1);
+          targetCtx.lineTo(x2, y2);
+        }
+        for (let i = 0; i < circlesRed.length; i += 3) {
+          const cx = circlesRed[i], cy = circlesRed[i+1], r = circlesRed[i+2];
+          if (cx + r < rectCad.minX || cx - r > rectCad.maxX || cy + r < rectCad.minY || cy - r > rectCad.maxY) continue;
+          targetCtx.moveTo(cx + r, cy);
+          targetCtx.arc(cx, cy, r, 0, Math.PI * 2);
+        }
+        for (let i = 0; i < arcsRed.length; i += 5) {
+          const cx = arcsRed[i], cy = arcsRed[i+1], r = arcsRed[i+2];
+          const sa = arcsRed[i+3] * Math.PI / 180, ea = arcsRed[i+4] * Math.PI / 180;
+          if (cx + r < rectCad.minX || cx - r > rectCad.maxX || cy + r < rectCad.minY || cy - r > rectCad.maxY) continue;
+          targetCtx.moveTo(cx + r * Math.cos(sa), cy + r * Math.sin(sa));
+          targetCtx.arc(cx, cy, r, sa, ea);
+        }
+        targetCtx.stroke();
+        targetCtx.setLineDash([]);
+      }
+
+      // 2. Geometry
+      targetCtx.strokeStyle = strokeWhite;
+      targetCtx.lineWidth = Math.max(0.9 / pScale, 0.6);
+      targetCtx.beginPath();
+      for (let i = 0; i < linesWhite.length; i += 4) {
+        const x1 = linesWhite[i], y1 = linesWhite[i+1], x2 = linesWhite[i+2], y2 = linesWhite[i+3];
+        if (x1 < rectCad.minX && x2 < rectCad.minX) continue;
+        if (x1 > rectCad.maxX && x2 > rectCad.maxX) continue;
+        if (y1 < rectCad.minY && y2 < rectCad.minY) continue;
+        if (y1 > rectCad.maxY && y2 > rectCad.maxY) continue;
+        targetCtx.moveTo(x1, y1);
+        targetCtx.lineTo(x2, y2);
+      }
+      for (let i = 0; i < circlesWhite.length; i += 3) {
+        const cx = circlesWhite[i], cy = circlesWhite[i+1], r = circlesWhite[i+2];
+        if (cx + r < rectCad.minX || cx - r > rectCad.maxX || cy + r < rectCad.minY || cy - r > rectCad.maxY) continue;
+        targetCtx.moveTo(cx + r, cy);
+        targetCtx.arc(cx, cy, r, 0, Math.PI * 2);
+      }
+      for (let i = 0; i < arcsWhite.length; i += 5) {
+        const cx = arcsWhite[i], cy = arcsWhite[i+1], r = arcsWhite[i+2];
+        const sa = arcsWhite[i+3] * Math.PI / 180, ea = arcsWhite[i+4] * Math.PI / 180;
+        if (cx + r < rectCad.minX || cx - r > rectCad.maxX || cy + r < rectCad.minY || cy - r > rectCad.maxY) continue;
+        targetCtx.moveTo(cx + r * Math.cos(sa), cy + r * Math.sin(sa));
+        targetCtx.arc(cx, cy, r, sa, ea);
+      }
+      targetCtx.stroke();
+
+      // 3. Dimensions
+      if (linesCyan.length > 0) {
+        targetCtx.strokeStyle = strokeCyan;
+        targetCtx.lineWidth = Math.max(0.75 / pScale, 0.4);
+        targetCtx.beginPath();
+        for (let i = 0; i < linesCyan.length; i += 4) {
+          const x1 = linesCyan[i], y1 = linesCyan[i+1], x2 = linesCyan[i+2], y2 = linesCyan[i+3];
+          if (x1 < rectCad.minX && x2 < rectCad.minX) continue;
+          if (x1 > rectCad.maxX && x2 > rectCad.maxX) continue;
+          if (y1 < rectCad.minY && y2 < rectCad.minY) continue;
+          if (y1 > rectCad.maxY && y2 > rectCad.maxY) continue;
+          targetCtx.moveTo(x1, y1);
+          targetCtx.lineTo(x2, y2);
+        }
+        targetCtx.stroke();
+      }
+
+      // 4. Texts
+      const lenT = texts.length;
+      for (let i = 0; i < lenT; i++) {
+        const item = texts[i];
+        const tx = item[0], ty = item[1], th = item[2], tstr = item[3], trot = item[4];
+        const halign = item[5] !== undefined ? item[5] : 0;
+        const valign = item[6] !== undefined ? item[6] : 0;
+        const colorType = item[7] !== undefined ? item[7] : 0;
+
+        const boundMargin = Math.max(3500, th * 25);
+        if (tx < rectCad.minX - boundMargin || tx > rectCad.maxX + boundMargin || ty < rectCad.minY - boundMargin || ty > rectCad.maxY + boundMargin) continue;
+
+        targetCtx.save();
+        targetCtx.translate(tx, ty);
+        targetCtx.scale(1, -1);
+        if (trot) targetCtx.rotate(-trot * Math.PI / 180);
+
+        targetCtx.textAlign = halign === 1 ? 'center' : (halign === 2 ? 'right' : 'left');
+        targetCtx.textBaseline = valign === 2 ? 'middle' : (valign === 3 ? 'top' : (valign === 1 ? 'bottom' : 'alphabetic'));
+
+        if (isMonochrome) {
+          targetCtx.fillStyle = '#000000';
+        } else {
+          targetCtx.fillStyle = (colorType === 1) ? '#0284c7' : ((colorType === 2) ? '#b45309' : '#111827');
+        }
+
+        targetCtx.font = `${colorType === 2 ? 'bold ' : ''}${Math.max(12, th)}px sans-serif`;
+
+        if (tstr.includes('  ')) {
+          const linesTxt = tstr.split(/\s{2,}/);
+          linesTxt.forEach((l, idx) => {
+            targetCtx.fillText(l.trim(), 0, idx * (th * 1.3));
+          });
+        } else {
+          targetCtx.fillText(tstr, 0, 0);
+        }
+
+        targetCtx.restore();
+      }
+
+      targetCtx.restore();
+    }
+  </script>
+</body>
+</html>

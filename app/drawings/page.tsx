@@ -2,10 +2,11 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ALL_DRAWINGS } from '@/drawings/registry';
+import { ALL_DRAWINGS, DRAWING_REGISTRY } from '@/drawings/registry';
 import { FileText, ArrowRight, Download, Eye, Layers, Compass, CheckCircle2 } from 'lucide-react';
 
 export default function DrawingsOverviewPage() {
+  const drawings = Object.values(DRAWING_REGISTRY);
   return (
     <div className="flex-1 overflow-y-auto p-8 space-y-8 bg-slate-50">
       {/* Header Banner */}
@@ -30,12 +31,12 @@ export default function DrawingsOverviewPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-900 tracking-wide">
-            Hồ Sơ Bản Vẽ Đang Quản Lý ({ALL_DRAWINGS.length})
+            Hồ Sơ Bản Vẽ Đang Quản Lý ({drawings.length})
           </h3>
-          <span className="text-xs text-slate-500 font-mono">Thư mục nguồn: /home/kvan185/KhanhVan/CAD/BanVe/</span>
+          <span className="text-xs text-slate-500 font-mono">Thư mục nguồn: /public/exports/</span>
         </div>
 
-        {ALL_DRAWINGS.length === 0 ? (
+        {drawings.length === 0 ? (
           <div className="p-12 bg-white rounded-2xl border border-slate-200 border-dashed text-center space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 mx-auto">
               <FileText className="w-6 h-6" />
@@ -47,7 +48,7 @@ export default function DrawingsOverviewPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {ALL_DRAWINGS.map((dwg) => (
+            {drawings.map((dwg) => (
             <div
               key={dwg.slug}
               className="bg-white border border-slate-200 hover:border-indigo-400 rounded-2xl p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-5"
