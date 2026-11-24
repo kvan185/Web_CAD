@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mô Hình 3D - Bồn Làm Mát & Xếp Phôi Tối Ưu Vật Tư (CAD Pro)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: #0b0f19;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #f8fafc;
+    }
+
+    #webgl-container {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      cursor: grab;
+    }
+    #webgl-container:active {
+      cursor: grabbing;
+    }
+
+    /* TOP MAIN TABS (MÁY vs CHI TIẾT) */
+    #top-nav {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .main-tab-bar {
+      display: flex;
+      background: rgba(15, 23, 42, 0.90);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 4px;
+      gap: 6px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .main-tab-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .main-tab-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .main-tab-btn.active {
+      background: #38bdf8;
+      color: #0b0f19;
+      font-weight: 700;
+      box-shadow: 0 2px 10px rgba(56, 189, 248, 0.35);
+    }
+
+    /* SUB TABS TRONG CHI TIẾT */
+    #sub-nav {
+      display: none;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 4px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .sub-tab-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .sub-tab-btn:hover {
+      color: #fff;
+    }
+
+    .sub-tab-btn.active {
+      background: rgba(56, 189, 248, 0.2);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    /* NÚT ĐIỀU KHIỂN XẾP PHÔI NESTING & GHÉP NỐI */
+    #action-nav {
+      display: none;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .action-btn {
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .action-btn:hover {
+      background: rgba(56, 189, 248, 0.25);
+      color: #fff;
+    }
+
+    .action-btn.active {
+      background: #38bdf8;
+      color: #0b0f19;
+    }
+
+    .action-btn.btn-accent {
+      border-color: rgba(245, 158, 11, 0.4);
+      color: #fbbf24;
+    }
+    .action-btn.btn-accent:hover {
+      background: rgba(245, 158, 11, 0.25);
+      color: #fff;
+    }
+
+    /* NÚT HAMBURGER 3 GẠCH GÓC TRÁI */
+    #menu-btn {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 60;
+      width: 42px;
+      height: 42px;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      transition: all 0.25s ease;
+    }
+
+    #menu-btn:hover {
+      background: rgba(30, 41, 59, 0.95);
+      border-color: #38bdf8;
+    }
+
+    .bar {
+      width: 20px;
+      height: 2px;
+      background: #f8fafc;
+      border-radius: 2px;
+    }
+
+    /* SIDEBAR DRAWER BÊN TRÁI */
+    #sidebar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 300px;
+      height: 100%;
+      z-index: 55;
+      background: rgba(11, 15, 25, 0.95);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 76px 20px 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-shadow: 10px 0 35px rgba(0, 0, 0, 0.6);
+      transform: translateX(-100%);
+      transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow-y: auto;
+    }
+
+    #sidebar.open {
+      transform: translateX(0);
+    }
+
+    .menu-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #38bdf8;
+      margin-bottom: 8px;
+    }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .tool-btn {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #cbd5e1;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+    }
+
+    .tool-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+    }
+
+    .tool-btn.active {
+      background: #38bdf8;
+      color: #0b0f19;
+      font-weight: 700;
+      border-color: #38bdf8;
+    }
+
+    .guide-card {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .guide-row {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .guide-key {
+      color: #38bdf8;
+      font-weight: 600;
+      font-size: 11px;
+    }
+
+    .guide-desc {
+      color: #cbd5e1;
+      font-size: 12px;
+    }
+
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 52;
+      background: rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    #overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* BADGE KÍCH THƯỚC GÓC DƯỚI PHẢI */
+    #info-badge {
+      position: absolute;
+      bottom: 16px;
+      right: 18px;
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+      color: #94a3b8;
+      pointer-events: none;
+    }
+    #info-badge b { color: #fff; }
+    #info-badge span { color: #38bdf8; font-weight: 600; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <div id="webgl-container"></div>
+  <div id="overlay" onclick="toggleMenu()"></div>
+
+  <!-- NÚT 3 GẠCH HAMBURGER -->
+  <div id="menu-btn" onclick="toggleMenu()" title="Mở bộ điều khiển">
+    <div class="bar"></div>
+    <div class="bar"></div>
+    <div class="bar"></div>
+  </div>
+
+  <!-- TOP NAV TABS CHÍNH -->
+  <div id="top-nav">
+    <div class="main-tab-bar">
+      <button class="main-tab-btn active" id="tab-machine" onclick="switchMainTab('machine')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+        Máy (Cụm Bồn Hoàn Chỉnh)
+      </button>
+      <button class="main-tab-btn" id="tab-detail" onclick="switchMainTab('detail')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        Chi Tiết (Phôi Vật Tư)
+      </button>
+    </div>
+
+    <!-- CÁC MỤC CON BÊN DƯỚI CHI TIẾT -->
+    <div id="sub-nav">
+      <button class="sub-tab-btn active" id="sub-gold" onclick="switchDetailItem('gold')">1. Tấm Inox Vàng (Vỏ Bồn)</button>
+      <button class="sub-tab-btn" id="sub-mesh" onclick="switchDetailItem('mesh')">2. Tấm Inox Lưới Đục Lỗ (Miếng 1000 + Miếng 500)</button>
+      <button class="sub-tab-btn" id="sub-square" onclick="switchDetailItem('square')">3. Hộp Inox Vuông 2cm Rỗng (Dài 20m)</button>
+    </div>
+
+    <!-- NÚT XEM GHÉP 2 TẤM TRÒN -->
+    <div id="action-nav">
+      <button class="action-btn btn-accent" id="btn-toggle-join" onclick="toggleJoinPreview()">
+        🔗 Xem Ghép 2 Tấm Tròn (Ø1500mm)
+      </button>
+    </div>
+  </div>
+
+  <!-- BADGE KÍCH THƯỚC NHANH -->
+  <div id="info-badge">
+    Đang xem: <b id="badge-title">Cụm Máy Bồn Làm Mát</b> | Quy cách: <span id="badge-spec">Ø1500 x 625 x 1.0mm</span>
+  </div>
+
+  <!-- SIDEBAR MENU BÊN TRÁI -->
+  <div id="sidebar">
+    <div>
+      <div class="menu-title">Chế Độ Xem (Mode)</div>
+      <div class="btn-group">
+        <button class="tool-btn active" id="btn-3d" onclick="setMode('3d')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.12 6.4-6-3.87a3 3 0 0 0-3.24 0l-6 3.87A3 3 0 0 0 4.5 9v6a3 3 0 0 0 1.38 2.6l6 3.87a3 3 0 0 0 3.24 0l6-3.87A3 3 0 0 0 22.5 15V9a3 3 0 0 0-1.38-2.6Z"/><path d="M12 22V12"/><path d="m22.5 9-10.5 3"/><path d="M1.5 9 12 12"/></svg>
+          3D Tự Do
+        </button>
+        <button class="tool-btn" id="btn-2d" onclick="setMode('2d')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+          2D Phẳng (Như Tờ Giấy)
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <div class="menu-title">Góc Nhìn Nhanh</div>
+      <div class="btn-group">
+        <button class="tool-btn" onclick="fitView()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+          Căn Vừa Khung
+        </button>
+        <button class="tool-btn" onclick="setViewTop()">Mặt Bằng (Top View)</button>
+        <button class="tool-btn" onclick="setViewIso()">Phối Cảnh (Iso)</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="menu-title">Thao Tác Chuột CAD</div>
+      <div class="guide-card">
+        <div class="guide-row">
+          <span class="guide-key">Chuột Trái vào Phôi:</span>
+          <span class="guide-desc">Kéo - Thả di chuyển trên tấm</span>
+        </div>
+        <div class="guide-row">
+          <span class="guide-key">Chuột Trái nền trống:</span>
+          <span class="guide-desc">Xoay 3D (hoặc Kéo lia ở 2D)</span>
+        </div>
+        <div class="guide-row">
+          <span class="guide-key">Chuột Giữa / Phải:</span>
+          <span class="guide-desc">Kéo Pan (Lia phôi mọi hướng)</span>
+        </div>
+        <div class="guide-row">
+          <span class="guide-key">Lăn Chuột:</span>
+          <span class="guide-desc">Phóng to thẳng vào con trỏ</span>
+        </div>
+        <div class="guide-row">
+          <span class="guide-key">Phím R:</span>
+          <span class="guide-desc">Xoay chi tiết đang chọn 90°</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. THAM SỐ CƠ KHÍ (SCALE 0.002) ---
+    const PARAMS = {
+      diameter: 1500,       // mm (Bồn làm mát)
+      height: 625,          // mm (Chiều cao vỏ = 1/2 cuộn 1250mm)
+      wallThickness: 1.0,   // mm
+      meshThickness: 1.2,   // mm
+      goldFlatL: 4712.4,    // mm
+      goldFlatW: 625.0,     // mm
+      longSheetW: 1000,     // mm (Khổ rộng tấm phôi dài: 1 mét)
+      longSheetL: 3000,     // mm (Chiều dài tấm phôi: 3 mét)
+      meshMargin: 25.0,     // mm (2 biên dọc 2.5cm)
+      holeDia: 2.8,         // mm
+      holePitch: 6.0,       // mm
+      jointGap: 0.1,        // mm
+      squareSize: 20,       // mm (Hộp vuông 2cm x 2cm = 20mm x 20mm)
+      squareWall: 1.0,      // mm (Độ dày thành hộp inox: 1.0mm)
+      squareLen: 20000,     // mm (Chiều dài thanh hộp xưởng: 20m = 20,000mm)
+      scale: 0.002
+    };
+
+    const Rout = (PARAMS.diameter / 2) * PARAMS.scale;                            // 1.5
+    const Rin = ((PARAMS.diameter - 2 * PARAMS.wallThickness) / 2) * PARAMS.scale; // 1.498
+    const Rmid = (Rout + Rin) / 2;
+    const H = PARAMS.height * PARAMS.scale;                                      // 1.25
+
+    const Rmesh = Rin; // 1.498 (749mm bán kính tròn)
+    const Tmesh = PARAMS.meshThickness * PARAMS.scale;
+    const seamX = (1000 - 749) * PARAMS.scale; // 0.502
+    const gapScene = PARAMS.jointGap * PARAMS.scale;
+
+    // --- 2. THREE.JS KHỞI TẠO ---
+    const container = document.getElementById("webgl-container");
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b0f19);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 100);
+    camera.position.set(2.4, 2.0, 3.0);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.35;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.rotateSpeed = 0.9;
+    controls.zoomSpeed = 1.2;
+    controls.panSpeed = 0.8;
+    controls.screenSpacePanning = true;
+    controls.target.set(0, 0, 0);
+
+    controls.mouseButtons = {
+      LEFT: THREE.MOUSE.ROTATE,
+      MIDDLE: THREE.MOUSE.PAN,
+      RIGHT: THREE.MOUSE.PAN
+    };
+
+    // --- 3. ÁNH SÁNG KIM LOẠI PBR ---
+    const ambientLight = new THREE.AmbientLight(0xfff7ed, 1.2);
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.8);
+    keyLight.position.set(6, 12, 8);
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xffedd5, 2.2);
+    fillLight.position.set(-6, 4, -4);
+    scene.add(fillLight);
+
+    const bottomLight = new THREE.DirectionalLight(0xe2e8f0, 1.6);
+    bottomLight.position.set(0, -6, 0);
+    scene.add(bottomLight);
+
+    // --- 4. TẠO CÁC MÔ HÌNH ---
+    // ==========================================
+    // NHÓM 1: CỤM MÁY BỒN LÀM MÁT HOÀN CHỈNH
+    // Đáy tròn ghép từ Miếng 1 (1000mm) + Miếng 2 (500mm)
+    // ==========================================
+    const machineGroup = new THREE.Group();
+
+    const halfGapAngle = (PARAMS.jointGap / 2 / (PARAMS.diameter / 2));
+    const sheetShape = new THREE.Shape();
+    sheetShape.absarc(0, 0, Rout, halfGapAngle, Math.PI * 2 - halfGapAngle, false);
+    sheetShape.lineTo(Math.cos(Math.PI * 2 - halfGapAngle) * Rin, Math.sin(Math.PI * 2 - halfGapAngle) * Rin);
+    sheetShape.absarc(0, 0, Rin, Math.PI * 2 - halfGapAngle, halfGapAngle, true);
+    sheetShape.lineTo(Math.cos(halfGapAngle) * Rout, Math.sin(halfGapAngle) * Rout);
+
+    const wallGeo = new THREE.ExtrudeGeometry(sheetShape, { depth: H, bevelEnabled: false, curveSegments: 240 });
+    wallGeo.center();
+
+    const goldMaterial = new THREE.MeshStandardMaterial({
+      color: 0xdfad36,
+      metalness: 0.94,
+      roughness: 0.16,
+      side: THREE.DoubleSide
+    });
+
+    const wallMesh = new THREE.Mesh(wallGeo, goldMaterial);
+    wallMesh.rotation.x = Math.PI / 2;
+    machineGroup.add(wallMesh);
+
+    const wallWeldGeo = new THREE.CylinderGeometry(0.0016, 0.0016, H, 16);
+    const wallWeldMat = new THREE.MeshStandardMaterial({ color: 0xc89d32, metalness: 0.90, roughness: 0.35 });
+    const wallWeldMesh = new THREE.Mesh(wallWeldGeo, wallWeldMat);
+    wallWeldMesh.position.set(Rmid, 0, 0);
+    machineGroup.add(wallWeldMesh);
+
+    // ===================================================================
+    // VẬT LIỆU TÔN LƯỚI ĐỤC LỖ TIÊU CHUẨN THỰC TẾ (KHỔ 1000 x 3000mm)
+    // CÓ 2 VIỀN ĐẶC 2.5CM DỌC BIÊN & ÁNH XẠ XUYÊN SUỐT CHO CẢ MÁY VÀ CHI TIẾT
+    // ===================================================================
+    const longW_scene = PARAMS.longSheetW * PARAMS.scale; // 2.0 (1000mm, X: -1.0 đến +1.0)
+    const longL_scene = PARAMS.longSheetL * PARAMS.scale; // 6.0 (3000mm, Z: -3.0 đến +3.0)
+    const longT_scene = PARAMS.meshThickness * PARAMS.scale;
+    const plateTopY = longT_scene / 2 + 0.002;
+
+    // Canvas tạo AlphaMap đục lỗ có 2 viền đặc 2.5cm chuẩn quy cách xưởng
+    const lTexW = 1024;
+    const lTexH = 3072;
+    const lTexCanvas = document.createElement("canvas");
+    lTexCanvas.width = lTexW;
+    lTexCanvas.height = lTexH;
+    const ltCtx = lTexCanvas.getContext("2d");
+
+    ltCtx.fillStyle = "#ffffff";
+    ltCtx.fillRect(0, 0, lTexW, lTexH);
+
+    const lPxPerMmW = lTexW / PARAMS.longSheetW;
+    const lHoleRadiusPx = (PARAMS.holeDia / 2) * lPxPerMmW;
+    const lPitchXPx = PARAMS.holePitch * lPxPerMmW;
+    const lPitchYPx = lPitchXPx * Math.sqrt(3) / 2;
+    const lMarginPx = PARAMS.meshMargin * lPxPerMmW; // 25mm
+
+    ltCtx.fillStyle = "#000000";
+    let lRow = 0;
+    for (let y = -lPitchYPx; y <= lTexH + lPitchYPx; y += lPitchYPx) {
+      const offsetX = (lRow % 2 === 0) ? 0 : (lPitchXPx / 2);
+      for (let x = -lPitchXPx; x <= lTexW + lPitchXPx; x += lPitchXPx) {
+        const posX = x + offsetX;
+        const posY = y;
+        if (posX >= lMarginPx && posX <= (lTexW - lMarginPx)) {
+          ltCtx.beginPath();
+          ltCtx.arc(posX, posY, lHoleRadiusPx, 0, Math.PI * 2);
+          ltCtx.fill();
+        }
+      }
+      lRow++;
+    }
+
+    const longAlphaMap = new THREE.CanvasTexture(lTexCanvas);
+    longAlphaMap.wrapS = THREE.ClampToEdgeWrapping;
+    longAlphaMap.wrapT = THREE.ClampToEdgeWrapping;
+    longAlphaMap.repeat.set(1, 1);
+
+    const longInoxMaterial = new THREE.MeshStandardMaterial({
+      color: 0xd1d5db,
+      metalness: 0.92,
+      roughness: 0.20,
+      alphaMap: longAlphaMap,
+      transparent: true,
+      alphaTest: 0.5,
+      side: THREE.DoubleSide
+    });
+
+    // Hàm ánh xạ UV từ phôi gốc vào Miếng 1 (Cụm Máy Bồn Hoàn Chỉnh)
+    // Miếng 1 cắt tại originX = 0, originZ = -1.496
+    // Khi ráp vào máy, tim hình tròn nằm tại (0,0), mép giáp mí tại x = 0.502
+    function assignMachineMeshUVs1(geo) {
+      const pos = geo.attributes.position;
+      const uvs = [];
+      const originZ = -1.496;
+      for (let i = 0; i < pos.count; i++) {
+        const x_local = pos.getX(i);
+        const y_local = pos.getY(i); // Shape 2D trục y tương ứng trục Z của bồn
+        const x_sheet = x_local + 0.5;
+        const z_sheet = originZ + y_local;
+        const u = (x_sheet / longW_scene) + 0.5;
+        const v = (z_sheet / longL_scene) + 0.5;
+        uvs.push(u, v);
+      }
+      geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    }
+
+    // Hàm ánh xạ UV từ phôi gốc vào Miếng 2 (Cụm Máy Bồn Hoàn Chỉnh)
+    // Miếng 2 cắt tại originX = -0.5, originZ = 0.744
+    function assignMachineMeshUVs2(geo) {
+      const pos = geo.attributes.position;
+      const uvs = [];
+      const originX = -0.5;
+      const originZ = 0.744;
+      for (let i = 0; i < pos.count; i++) {
+        const x_local = pos.getX(i);
+        const y_local = pos.getY(i);
+        const x_sheet = originX + (x_local - 1.0); // x_local - 1.0 chính là tọa độ x của p2
+        const z_sheet = originZ + y_local;
+        const u = (x_sheet / longW_scene) + 0.5;
+        const v = (z_sheet / longL_scene) + 0.5;
+        uvs.push(u, v);
+      }
+      geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    }
+
+    const centerHoleRadius = 20 * PARAMS.scale; // 20mm (Lỗ Ø40mm) = 0.04 units
+
+    // MIẾNG 1 TRONG ĐÁY BỒN (Rộng 1000mm)
+    const xEnd1 = seamX - gapScene / 2;
+    const zSpan1 = Math.sqrt(Math.max(0, Rmesh * Rmesh - xEnd1 * xEnd1));
+    const theta1 = Math.atan2(zSpan1, xEnd1);
+
+    const s1 = new THREE.Shape();
+    s1.absarc(0, 0, Rmesh, theta1, Math.PI * 2 - theta1, false);
+    s1.lineTo(xEnd1, -zSpan1);
+    s1.lineTo(xEnd1, zSpan1);
+
+    // Khoan lỗ tâm Ø40mm ngay chính giữa tâm đáy bồn
+    const s1Hole = new THREE.Path();
+    s1Hole.absarc(0, 0, centerHoleRadius, 0, Math.PI * 2, true);
+    s1.holes.push(s1Hole);
+
+    const g1 = new THREE.ExtrudeGeometry(s1, { depth: Tmesh, bevelEnabled: false, curveSegments: 180 });
+    assignMachineMeshUVs1(g1);
+    const m1 = new THREE.Mesh(g1, longInoxMaterial);
+    m1.rotation.x = Math.PI / 2;
+    m1.position.y = Tmesh / 2;
+    machineGroup.add(m1);
+
+    // MIẾNG 2 TRONG ĐÁY BỒN (Rộng 500mm bù vào)
+    const xStart2 = seamX + gapScene / 2;
+    const zSpan2 = Math.sqrt(Math.max(0, Rmesh * Rmesh - xStart2 * xStart2));
+    const theta2 = Math.atan2(zSpan2, xStart2);
+
+    const s2 = new THREE.Shape();
+    s2.absarc(0, 0, Rmesh, -theta2, theta2, false);
+    s2.lineTo(xStart2, zSpan2);
+    s2.lineTo(xStart2, -zSpan2);
+
+    const g2 = new THREE.ExtrudeGeometry(s2, { depth: Tmesh, bevelEnabled: false, curveSegments: 180 });
+    assignMachineMeshUVs2(g2);
+    const m2 = new THREE.Mesh(g2, longInoxMaterial);
+    m2.rotation.x = Math.PI / 2;
+    m2.position.y = Tmesh / 2;
+    machineGroup.add(m2);
+
+    // Đường hàn TIG liên kết 2 miếng trong đáy bồn (dài 1414.2mm, nằm giữa dải tôn đặc 5cm)
+    const seamWeldGeo = new THREE.CylinderGeometry(0.0018, 0.0018, zSpan1 * 2, 12);
+    const seamWeldMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.92, roughness: 0.32 });
+    const seamWeldMesh = new THREE.Mesh(seamWeldGeo, seamWeldMat);
+    seamWeldMesh.rotation.x = Math.PI / 2;
+    seamWeldMesh.position.set(seamX, 0, 0);
+    machineGroup.add(seamWeldMesh);
+
+    // -------------------------------------------------------------
+    // 2 THANH HỘP INOX VUÔNG 20x20x1.0mm ĐỠ DƯỚI ĐÁY BỒN (PHƯƠNG DỌC)
+    // Đặt song song tại X = ±100mm (cách nhau 20cm, kẹp giữa lỗ tâm Ø40mm)
+    // Chiều dài ≈ 1484.4mm, gọt xéo 2 đầu ôm sát thân bồn cách đúng 0.1mm để hàn khí
+    // -------------------------------------------------------------
+    function createBeveledHollowTubeGeo(x0, R_tank, gap, w, h, t) {
+      const R_cut = R_tank - gap;
+      const x1 = x0 - w / 2;
+      const x2 = x0 + w / 2;
+      const x1_in = x1 + t;
+      const x2_in = x2 - t;
+
+      const z1_out = Math.sqrt(Math.max(0, R_cut * R_cut - x1 * x1));
+      const z2_out = Math.sqrt(Math.max(0, R_cut * R_cut - x2 * x2));
+      const z1_in  = Math.sqrt(Math.max(0, R_cut * R_cut - x1_in * x1_in));
+      const z2_in  = Math.sqrt(Math.max(0, R_cut * R_cut - x2_in * x2_in));
+
+      const yTop = 0;
+      const yBot = -h;
+      const yTop_in = -t;
+      const yBot_in = -h + t;
+
+      const positions = [];
+      const indices = [];
+
+      function addQuad(p0, p1, p2, p3) {
+        const base = positions.length / 3;
+        positions.push(
+          p0.x, p0.y, p0.z,
+          p1.x, p1.y, p1.z,
+          p2.x, p2.y, p2.z,
+          p3.x, p3.y, p3.z
+        );
+        indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+      }
+
+      // 4 mặt ngoài
+      addQuad({ x: x1, y: yTop, z: -z1_out }, { x: x2, y: yTop, z: -z2_out }, { x: x2, y: yTop, z:  z2_out }, { x: x1, y: yTop, z:  z1_out });
+      addQuad({ x: x1, y: yBot, z:  z1_out }, { x: x2, y: yBot, z:  z2_out }, { x: x2, y: yBot, z: -z2_out }, { x: x1, y: yBot, z: -z1_out });
+      addQuad({ x: x1, y: yBot, z: -z1_out }, { x: x1, y: yBot, z:  z1_out }, { x: x1, y: yTop, z:  z1_out }, { x: x1, y: yTop, z: -z1_out });
+      addQuad({ x: x2, y: yTop, z: -z2_out }, { x: x2, y: yTop, z:  z2_out }, { x: x2, y: yBot, z:  z2_out }, { x: x2, y: yBot, z: -z2_out });
+
+      // 4 mặt trong
+      addQuad({ x: x1_in, y: yTop_in, z:  z1_in }, { x: x2_in, y: yTop_in, z:  z2_in }, { x: x2_in, y: yTop_in, z: -z2_in }, { x: x1_in, y: yTop_in, z: -z1_in });
+      addQuad({ x: x1_in, y: yBot_in, z: -z1_in }, { x: x2_in, y: yBot_in, z: -z2_in }, { x: x2_in, y: yBot_in, z:  z2_in }, { x: x1_in, y: yBot_in, z:  z1_in });
+      addQuad({ x: x1_in, y: yTop_in, z: -z1_in }, { x: x1_in, y: yTop_in, z:  z1_in }, { x: x1_in, y: yBot_in, z:  z1_in }, { x: x1_in, y: yBot_in, z: -z1_in });
+      addQuad({ x: x2_in, y: yBot_in, z: -z2_in }, { x: x2_in, y: yBot_in, z:  z2_in }, { x: x2_in, y: yTop_in, z:  z2_in }, { x: x2_in, y: yTop_in, z: -z2_in });
+
+      // 2 mặt cắt đầu ống (đầu +Z và -Z)
+      addQuad({ x: x1, y: yTop, z: z1_out }, { x: x2, y: yTop, z: z2_out }, { x: x2_in, y: yTop_in, z: z2_in }, { x: x1_in, y: yTop_in, z: z1_in });
+      addQuad({ x: x2, y: yTop, z: z2_out }, { x: x2, y: yBot, z: z2_out }, { x: x2_in, y: yBot_in, z: z2_in }, { x: x2_in, y: yTop_in, z: z2_in });
+      addQuad({ x: x2, y: yBot, z: z2_out }, { x: x1, y: yBot, z: z1_out }, { x: x1_in, y: yBot_in, z: z1_in }, { x: x2_in, y: yBot_in, z: z2_in });
+      addQuad({ x: x1, y: yBot, z: z1_out }, { x: x1, y: yTop, z: z1_out }, { x: x1_in, y: yTop_in, z: z1_in }, { x: x1_in, y: yBot_in, z: z1_in });
+
+      addQuad({ x: x2, y: yTop, z: -z2_out }, { x: x1, y: yTop, z: -z1_out }, { x: x1_in, y: yTop_in, z: -z1_in }, { x: x2_in, y: yTop_in, z: -z2_in });
+      addQuad({ x: x2, y: yBot, z: -z2_out }, { x: x2, y: yBot, z: -z2_out }, { x: x2_in, y: yBot_in, z: -z2_in }, { x: x2_in, y: yBot_in, z: -z2_in });
+      addQuad({ x: x1, y: yBot, z: -z1_out }, { x: x2, y: yBot, z: -z2_out }, { x: x2_in, y: yBot_in, z: -z2_in }, { x: x1_in, y: yBot_in, z: -z1_in });
+      addQuad({ x: x1, y: yTop, z: -z1_out }, { x: x1, y: yBot, z: -z1_out }, { x: x1_in, y: yBot_in, z: -z1_in }, { x: x1_in, y: yTop_in, z: -z1_in });
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    const sqBeamW = PARAMS.squareSize * PARAMS.scale;    // 0.04 (20mm)
+    const sqBeamH = PARAMS.squareSize * PARAMS.scale;    // 0.04 (20mm)
+    const sqBeamT = PARAMS.squareWall * PARAMS.scale;    // 0.002 (1.0mm)
+    const sqGap = 0.1 * PARAMS.scale;                    // 0.0002 (0.1mm khe hở kỹ thuật hàn)
+
+    // QUY CHUẨN MỚI: Ô VUÔNG 20x20cm TOÀN BỘ ĐÁY BỒN (LỌT LÒNG 200mm, XEN KẼ SO LE)
+    const sqClearSpan = 200 * PARAMS.scale;              // 0.4 (200mm = 20cm lọt lòng mọi ô)
+    const sqCrossLen = sqClearSpan - 2 * sqGap;          // 0.3996 (199.8mm: mỗi đầu hở 0.1mm chuẩn hàn)
+
+    // Tọa độ X của 6 thanh dọc (3 cặp đối xứng)
+    const sqDistX_mid = (sqClearSpan + sqBeamW) / 2;            // 0.22 (110mm: trong ±100, ngoài ±120mm)
+    const sqDistX_int = sqDistX_mid + sqBeamW + sqClearSpan;    // 0.66 (330mm: trong ±320, ngoài ±340mm)
+    const sqDistX_out = sqDistX_int + sqBeamW + sqClearSpan;    // 1.10 (550mm: trong ±540, ngoài ±560mm)
+
+    // Tọa độ X của các thanh ngang
+    const sqCrossX_intL = -(sqDistX_mid + sqBeamW / 2 + sqClearSpan / 2); // -0.44 (-220mm)
+    const sqCrossX_intR = sqDistX_mid + sqBeamW / 2 + sqClearSpan / 2;   // +0.44 (+220mm)
+    const sqCrossX_outL = -(sqDistX_int + sqBeamW / 2 + sqClearSpan / 2); // -0.88 (-440mm)
+    const sqCrossX_outR = sqDistX_int + sqBeamW / 2 + sqClearSpan / 2;   // +0.88 (+440mm)
+
+    // Vị trí Z các thanh ngang xen kẽ (bước 20cm, so le 10cm)
+    const crossPositionsZ_col0 = [-500, -300, -100, 100, 300, 500].map(z => z * PARAMS.scale); // Dãy giữa: 6 cây
+    const crossPositionsZ_col1 = [-600, -400, -200, 0, 200, 400, 600].map(z => z * PARAMS.scale); // Dãy trung gian: 7 cây/bên (phủ kín 2 đầu)
+    const crossPositionsZ_col2 = [-500, -300, -100, 100, 300, 500].map(z => z * PARAMS.scale); // Dãy ngoài: 6 cây/bên (phủ kín 2 đầu)
+
+    // Dãy cánh cung ngoài cùng (từ mặt ngoài thanh dọc thứ 3 ra sát thành bồn cong, đã bỏ 4 thanh cụt 4 góc)
+    const sqLongOuterX = sqDistX_out + sqBeamW / 2; // 0.56 (560mm)
+    const rimPositionsZ = [-200, 0, 200].map(z => z * PARAMS.scale); // 3 cây/bên (bỏ 4 thanh cụt Z = ±400mm)
+
+    function createCrossHollowTubeGeo(lenX, wZ, hY, t) {
+      const x1 = -lenX / 2;
+      const x2 = lenX / 2;
+      const z1 = -wZ / 2;
+      const z2 = wZ / 2;
+      const z1_in = z1 + t;
+      const z2_in = z2 - t;
+
+      const yTop = 0;
+      const yBot = -hY;
+      const yTop_in = -t;
+      const yBot_in = -hY + t;
+
+      const positions = [];
+      const indices = [];
+
+      function addQuad(p0, p1, p2, p3) {
+        const base = positions.length / 3;
+        positions.push(
+          p0.x, p0.y, p0.z,
+          p1.x, p1.y, p1.z,
+          p2.x, p2.y, p2.z,
+          p3.x, p3.y, p3.z
+        );
+        indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+      }
+
+      // 4 mặt ngoài (trục X)
+      addQuad({ x: x1, y: yTop, z: z1 }, { x: x1, y: yTop, z: z2 }, { x: x2, y: yTop, z: z2 }, { x: x2, y: yTop, z: z1 });
+      addQuad({ x: x1, y: yBot, z: z2 }, { x: x1, y: yBot, z: z1 }, { x: x2, y: yBot, z: z1 }, { x: x2, y: yBot, z: z2 });
+      addQuad({ x: x1, y: yBot, z: z2 }, { x: x2, y: yBot, z: z2 }, { x: x2, y: yTop, z: z2 }, { x: x1, y: yTop, z: z2 });
+      addQuad({ x: x2, y: yBot, z: z1 }, { x: x1, y: yBot, z: z1 }, { x: x1, y: yTop, z: z1 }, { x: x2, y: yTop, z: z1 });
+
+      // 4 mặt trong
+      addQuad({ x: x1, y: yTop_in, z: z2_in }, { x: x1, y: yTop_in, z: z1_in }, { x: x2, y: yTop_in, z: z1_in }, { x: x2, y: yTop_in, z: z2_in });
+      addQuad({ x: x1, y: yBot_in, z: z1_in }, { x: x1, y: yBot_in, z: z2_in }, { x: x2, y: yBot_in, z: z2_in }, { x: x2, y: yBot_in, z: z1_in });
+      addQuad({ x: x2, y: yBot_in, z: z2_in }, { x: x1, y: yBot_in, z: z2_in }, { x: x1, y: yTop_in, z: z2_in }, { x: x2, y: yTop_in, z: z2_in });
+      addQuad({ x: x1, y: yBot_in, z: z1_in }, { x: x2, y: yBot_in, z: z1_in }, { x: x2, y: yTop_in, z: z1_in }, { x: x1, y: yTop_in, z: z1_in });
+
+      // 2 mặt cắt đầu ống (-X và +X)
+      addQuad({ x: x1, y: yTop, z: z1 }, { x: x1, y: yTop_in, z: z1_in }, { x: x1, y: yTop_in, z: z2_in }, { x: x1, y: yTop, z: z2 });
+      addQuad({ x: x1, y: yBot_in, z: z1_in }, { x: x1, y: yBot, z: z1 }, { x: x1, y: yBot, z: z2 }, { x: x1, y: yBot_in, z: z2_in });
+      addQuad({ x: x1, y: yBot, z: z1 }, { x: x1, y: yBot_in, z: z1_in }, { x: x1, y: yTop_in, z: z1_in }, { x: x1, y: yTop, z: z1 });
+      addQuad({ x: x1, y: yTop_in, z: z2_in }, { x: x1, y: yBot_in, z: z2_in }, { x: x1, y: yBot, z: z2 }, { x: x1, y: yTop, z: z2 });
+
+      addQuad({ x: x2, y: yTop, z: z2 }, { x: x2, y: yTop_in, z: z2_in }, { x: x2, y: yTop_in, z: z1_in }, { x: x2, y: yTop, z: z1 });
+      addQuad({ x: x2, y: yBot_in, z: z2_in }, { x: x2, y: yBot, z: z2 }, { x: x2, y: yBot, z: z1 }, { x: x2, y: yBot_in, z: z1_in });
+      addQuad({ x: x2, y: yTop, z: z1 }, { x: x2, y: yTop_in, z: z1_in }, { x: x2, y: yBot_in, z: z1_in }, { x: x2, y: yTop, z: z1 });
+      addQuad({ x: x2, y: yTop, z: z2 }, { x: x2, y: yBot, z: z2 }, { x: x2, y: yBot_in, z: z2_in }, { x: x2, y: yTop_in, z: z2_in });
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    function createRimHollowTubeGeo(isRight, zCenter, xFace, R_tank, gap, wZ, hY, t) {
+      const sign = isRight ? 1 : -1;
+      const x_in = sign * (xFace + gap);
+      const z1 = zCenter - wZ / 2;
+      const z2 = zCenter + wZ / 2;
+      const z1_in = z1 + t;
+      const z2_in = z2 - t;
+
+      const R_cut = R_tank - gap;
+      const x1_out = sign * Math.sqrt(Math.max(0, R_cut * R_cut - z1 * z1));
+      const x2_out = sign * Math.sqrt(Math.max(0, R_cut * R_cut - z2 * z2));
+      const x1_in = sign * Math.sqrt(Math.max(0, R_cut * R_cut - z1_in * z1_in));
+      const x2_in = sign * Math.sqrt(Math.max(0, R_cut * R_cut - z2_in * z2_in));
+
+      const yTop = 0;
+      const yBot = -hY;
+      const yTop_in = -t;
+      const yBot_in = -hY + t;
+
+      const positions = [];
+      const indices = [];
+
+      function addQuad(p0, p1, p2, p3) {
+        const base = positions.length / 3;
+        positions.push(
+          p0.x, p0.y, p0.z,
+          p1.x, p1.y, p1.z,
+          p2.x, p2.y, p2.z,
+          p3.x, p3.y, p3.z
+        );
+        if (isRight) {
+          indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+        } else {
+          indices.push(base, base + 2, base + 1, base, base + 3, base + 2);
+        }
+      }
+
+      // 4 mặt ngoài
+      addQuad({ x: x_in, y: yTop, z: z1 }, { x: x1_out, y: yTop, z: z1 }, { x: x2_out, y: yTop, z: z2 }, { x: x_in, y: yTop, z: z2 });
+      addQuad({ x: x_in, y: yBot, z: z2 }, { x: x2_out, y: yBot, z: z2 }, { x: x1_out, y: yBot, z: z1 }, { x: x_in, y: yBot, z: z1 });
+      addQuad({ x: x_in, y: yBot, z: z1 }, { x: x1_out, y: yBot, z: z1 }, { x: x1_out, y: yTop, z: z1 }, { x: x_in, y: yTop, z: z1 });
+      addQuad({ x: x_in, y: yTop, z: z2 }, { x: x2_out, y: yTop, z: z2 }, { x: x2_out, y: yBot, z: z2 }, { x: x_in, y: yBot, z: z2 });
+
+      // 4 mặt trong
+      addQuad({ x: x_in, y: yTop_in, z: z2_in }, { x: x2_in, y: yTop_in, z: z2_in }, { x: x1_in, y: yTop_in, z: z1_in }, { x: x_in, y: yTop_in, z: z1_in });
+      addQuad({ x: x_in, y: yBot_in, z: z1_in }, { x: x1_in, y: yBot_in, z: z1_in }, { x: x2_in, y: yBot_in, z: z2_in }, { x: x_in, y: yBot_in, z: z2_in });
+      addQuad({ x: x_in, y: yTop_in, z: z1_in }, { x: x1_in, y: yTop_in, z: z1_in }, { x: x1_in, y: yBot_in, z: z1_in }, { x: x_in, y: yBot_in, z: z1_in });
+      addQuad({ x: x_in, y: yBot_in, z: z2_in }, { x: x2_in, y: yBot_in, z: z2_in }, { x: x2_in, y: yTop_in, z: z2_in }, { x: x_in, y: yTop_in, z: z2_in });
+
+      // Đầu trong (áp vào thanh dọc phẳng)
+      addQuad({ x: x_in, y: yTop, z: z2 }, { x: x_in, y: yTop_in, z: z2_in }, { x: x_in, y: yTop_in, z: z1_in }, { x: x_in, y: yTop, z: z1 });
+      addQuad({ x: x_in, y: yBot_in, z: z2_in }, { x: x_in, y: yBot, z: z2 }, { x: x_in, y: yBot, z: z1 }, { x: x_in, y: yBot_in, z: z1_in });
+      addQuad({ x: x_in, y: yTop, z: z1 }, { x: x_in, y: yTop_in, z: z1_in }, { x: x_in, y: yBot_in, z: z1_in }, { x: x_in, y: yBot, z: z1 });
+      addQuad({ x: x_in, y: yTop_in, z: z2_in }, { x: x_in, y: yTop, z: z2 }, { x: x_in, y: yBot, z: z2 }, { x: x_in, y: yBot_in, z: z2_in });
+
+      // Đầu ngoài (ôm sát vành cong thành bồn)
+      addQuad({ x: x1_out, y: yTop, z: z1 }, { x: x1_in, y: yTop_in, z: z1_in }, { x: x2_in, y: yTop_in, z: z2_in }, { x: x2_out, y: yTop, z: z2 });
+      addQuad({ x: x2_out, y: yBot, z: z2 }, { x: x2_in, y: yBot_in, z: z2_in }, { x: x1_in, y: yBot_in, z: z1_in }, { x: x1_out, y: yBot, z: z1 });
+      addQuad({ x: x1_out, y: yBot, z: z1 }, { x: x1_in, y: yBot_in, z: z1_in }, { x: x1_in, y: yTop_in, z: z1_in }, { x: x1_out, y: yTop, z: z1 });
+      addQuad({ x: x2_out, y: yTop, z: z2 }, { x: x2_in, y: yTop_in, z: z2_in }, { x: x2_in, y: yBot_in, z: z2_in }, { x: x2_out, y: yBot, z: z2 });
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+      geo.setIndex(indices);
+      geo.computeVertexNormals();
+      return geo;
+    }
+
+    const crossTubeGeo = createCrossHollowTubeGeo(sqCrossLen, sqBeamW, sqBeamH, sqBeamT);
+    const crossEdgesGeo = new THREE.EdgesGeometry(crossTubeGeo);
+
+    // Geometries cho 10 thanh giằng cánh cung ngoài (5 bên trái, 5 bên phải)
+    const rimGeosLeft = rimPositionsZ.map(zVal => createRimHollowTubeGeo(false, zVal, sqLongOuterX, Rmesh, sqGap, sqBeamW, sqBeamH, sqBeamT));
+    const rimGeosRight = rimPositionsZ.map(zVal => createRimHollowTubeGeo(true, zVal, sqLongOuterX, Rmesh, sqGap, sqBeamW, sqBeamH, sqBeamT));
+    const rimEdgesLeft = rimGeosLeft.map(geo => new THREE.EdgesGeometry(geo));
+    const rimEdgesRight = rimGeosRight.map(geo => new THREE.EdgesGeometry(geo));
+
+    const supportTubeMat = new THREE.MeshStandardMaterial({
+      color: 0xd1d5db,
+      metalness: 0.94,
+      roughness: 0.20,
+      side: THREE.DoubleSide
+    });
+    const supportEdgeMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
+
+    // 1. Cặp thanh giằng dọc giữa (lọt lòng 20cm kẹp giữa lỗ Ø40mm, mặt trong tại X = ±100mm)
+    const tubeGeoLeft = createBeveledHollowTubeGeo(-sqDistX_mid, Rmesh, sqGap, sqBeamW, sqBeamH, sqBeamT);
+    const tubeMeshLeft = new THREE.Mesh(tubeGeoLeft, supportTubeMat);
+    machineGroup.add(tubeMeshLeft);
+    const tubeEdgesLeft = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoLeft), supportEdgeMat);
+    machineGroup.add(tubeEdgesLeft);
+
+    const tubeGeoRight = createBeveledHollowTubeGeo(sqDistX_mid, Rmesh, sqGap, sqBeamW, sqBeamH, sqBeamT);
+    const tubeMeshRight = new THREE.Mesh(tubeGeoRight, supportTubeMat);
+    machineGroup.add(tubeMeshRight);
+    const tubeEdgesRight = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoRight), supportEdgeMat);
+    machineGroup.add(tubeEdgesRight);
+
+    // 2. Cặp thanh giằng dọc trung gian (cách thanh giữa lọt lòng 20cm, mặt trong tại X = ±320mm)
+    const tubeGeoLeftInt = createBeveledHollowTubeGeo(-sqDistX_int, Rmesh, sqGap, sqBeamW, sqBeamH, sqBeamT);
+    const tubeMeshLeftInt = new THREE.Mesh(tubeGeoLeftInt, supportTubeMat);
+    machineGroup.add(tubeMeshLeftInt);
+    const tubeEdgesLeftInt = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoLeftInt), supportEdgeMat);
+    machineGroup.add(tubeEdgesLeftInt);
+
+    const tubeGeoRightInt = createBeveledHollowTubeGeo(sqDistX_int, Rmesh, sqGap, sqBeamW, sqBeamH, sqBeamT);
+    const tubeMeshRightInt = new THREE.Mesh(tubeGeoRightInt, supportTubeMat);
+    machineGroup.add(tubeMeshRightInt);
+    const tubeEdgesRightInt = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoRightInt), supportEdgeMat);
+    machineGroup.add(tubeEdgesRightInt);
+
+    // 3. Cặp thanh giằng dọc ngoài (cách thanh trung gian lọt lòng 20cm, mặt trong tại X = ±540mm)
+    const tubeGeoLeftOut = createBeveledHollowTubeGeo(-sqDistX_out, Rmesh, sqGap, sqBeamW, sqBeamH, sqBeamT);
+    const tubeMeshLeftOut = new THREE.Mesh(tubeGeoLeftOut, supportTubeMat);
+    machineGroup.add(tubeMeshLeftOut);
+    const tubeEdgesLeftOut = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoLeftOut), supportEdgeMat);
+    machineGroup.add(tubeEdgesLeftOut);
+
+    const tubeGeoRightOut = createBeveledHollowTubeGeo(sqDistX_out, Rmesh, sqGap, sqBeamW, sqBeamH, sqBeamT);
+    const tubeMeshRightOut = new THREE.Mesh(tubeGeoRightOut, supportTubeMat);
+    machineGroup.add(tubeMeshRightOut);
+    const tubeEdgesRightOut = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoRightOut), supportEdgeMat);
+    machineGroup.add(tubeEdgesRightOut);
+
+    // 4. Sáu thanh giằng ngang ở giữa (dài 199.8mm, hở 0.1mm) tạo ô lưới 20x20cm
+    crossPositionsZ_col0.forEach(zVal => {
+      const crossMesh = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      crossMesh.position.set(0, 0, zVal);
+      machineGroup.add(crossMesh);
+
+      const crossEdges = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      crossEdges.position.set(0, 0, zVal);
+      machineGroup.add(crossEdges);
+    });
+
+    // 5. Mười thanh giằng ngang ở 2 bên trung gian (dài 199.8mm, hở 0.1mm) xen kẽ
+    crossPositionsZ_col1.forEach(zVal => {
+      // Bên trái trung gian
+      const crossMeshL = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      crossMeshL.position.set(sqCrossX_intL, 0, zVal);
+      machineGroup.add(crossMeshL);
+      const crossEdgesL = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      crossEdgesL.position.set(sqCrossX_intL, 0, zVal);
+      machineGroup.add(crossEdgesL);
+
+      // Bên phải trung gian
+      const crossMeshR = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      crossMeshR.position.set(sqCrossX_intR, 0, zVal);
+      machineGroup.add(crossMeshR);
+      const crossEdgesR = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      crossEdgesR.position.set(sqCrossX_intR, 0, zVal);
+      machineGroup.add(crossEdgesR);
+    });
+
+    // 6. Tám thanh giằng ngang ở 2 bên ngoài (dài 199.8mm, hở 0.1mm) xen kẽ
+    crossPositionsZ_col2.forEach(zVal => {
+      // Bên trái ngoài
+      const crossMeshOutL = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      crossMeshOutL.position.set(sqCrossX_outL, 0, zVal);
+      machineGroup.add(crossMeshOutL);
+      const crossEdgesOutL = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      crossEdgesOutL.position.set(sqCrossX_outL, 0, zVal);
+      machineGroup.add(crossEdgesOutL);
+
+      // Bên phải ngoài
+      const crossMeshOutR = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      crossMeshOutR.position.set(sqCrossX_outR, 0, zVal);
+      machineGroup.add(crossMeshOutR);
+      const crossEdgesOutR = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      crossEdgesOutR.position.set(sqCrossX_outR, 0, zVal);
+      machineGroup.add(crossEdgesOutR);
+    });
+
+    // 7. Mười thanh giằng cánh cung ngoài cùng chống ra vách bồn cong
+    rimPositionsZ.forEach((_, idx) => {
+      // Bên trái
+      const rimMeshL = new THREE.Mesh(rimGeosLeft[idx], supportTubeMat);
+      machineGroup.add(rimMeshL);
+      const rimEdgeL = new THREE.LineSegments(rimEdgesLeft[idx], supportEdgeMat);
+      machineGroup.add(rimEdgeL);
+
+      // Bên phải
+      const rimMeshR = new THREE.Mesh(rimGeosRight[idx], supportTubeMat);
+      machineGroup.add(rimMeshR);
+      const rimEdgeR = new THREE.LineSegments(rimEdgesRight[idx], supportEdgeMat);
+      machineGroup.add(rimEdgeR);
+    });
+
+    scene.add(machineGroup);
+
+    // ==========================================
+    // NHÓM 2A: PHÔI TẤM INOX VÀNG PHẲNG XẢ BĂNG
+    // ==========================================
+    const detailGoldGroup = new THREE.Group();
+    const goldFlatW_scene = PARAMS.goldFlatW * PARAMS.scale;
+    const goldFlatL_scene = PARAMS.goldFlatL * PARAMS.scale;
+    const goldFlatT_scene = PARAMS.wallThickness * PARAMS.scale;
+
+    const goldFlatGeo = new THREE.BoxGeometry(goldFlatW_scene, goldFlatT_scene, goldFlatL_scene);
+    const goldFlatMesh = new THREE.Mesh(goldFlatGeo, goldMaterial);
+    detailGoldGroup.add(goldFlatMesh);
+
+    detailGoldGroup.visible = false;
+    scene.add(detailGoldGroup);
+
+    // ==========================================
+    // NHÓM 2B: 1 TẤM INOX ĐỤC LỖ DÀI (1000 x 3000mm)
+    // CHỨA 2 MIẾNG ĐỘNG (INTERACTIVE DRAGGABLE & ROTATABLE)
+    // ==========================================
+    const detailMeshGroup = new THREE.Group();
+
+    const longPlateGeo = new THREE.BoxGeometry(longW_scene, longT_scene, longL_scene);
+    const lpPos = longPlateGeo.attributes.position;
+    const lpUvs = [];
+    for (let i = 0; i < lpPos.count; i++) {
+      const x = lpPos.getX(i);
+      const z = lpPos.getZ(i);
+      const u = (x / longW_scene) + 0.5;
+      const v = (z / longL_scene) + 0.5;
+      lpUvs.push(u, v);
+    }
+    longPlateGeo.setAttribute("uv", new THREE.Float32BufferAttribute(lpUvs, 2));
+
+    const longPlateMesh = new THREE.Mesh(longPlateGeo, longInoxMaterial);
+    detailMeshGroup.add(longPlateMesh);
+
+    // -------------------------------------------------------------------
+    // 2 MIẾNG CẮT ĐỘNG: MIẾNG 1 (TO 1000mm) & MIẾNG 2 (NHỎ 500mm)
+    // -------------------------------------------------------------------
+    const R_cut = (PARAMS.diameter / 2) * PARAMS.scale; // 1.5 units (750mm)
+    const th_cut = Math.acos(1 / 3);                   // 70.5288 deg (chord distance = 250mm = 0.5 units)
+    const chordHalfLen = Math.sqrt(2.0);              // 1.4142 units (707.1mm -> chord = 1414.2mm)
+
+    // Khối Group chứa 2 phôi động
+    const nestingGroup = new THREE.Group();
+    detailMeshGroup.add(nestingGroup);
+
+    // --- MIẾNG 1: KHỔ TO 1000mm ---
+    // Tâm hình học cục bộ đặt tại (0, 0): X từ -1.0 (đỉnh cung) đến +1.0 (mép giáp mí)
+    const p1Group = new THREE.Group();
+    p1Group.name = "p1";
+
+    const p1Shape = new THREE.Shape();
+    p1Shape.absarc(0.5, 0, R_cut, th_cut, Math.PI * 2 - th_cut, false);
+    p1Shape.lineTo(1.0, chordHalfLen);
+
+    // Khoan lỗ tâm Ø40mm (R = 20mm) tại tâm bồn (tọa độ cục bộ x = 0.5, z = 0 của Miếng 1)
+    const p1CenterHole = new THREE.Path();
+    p1CenterHole.absarc(0.5, 0, centerHoleRadius, 0, Math.PI * 2, true);
+    p1Shape.holes.push(p1CenterHole);
+
+    const p1Geo = new THREE.ShapeGeometry(p1Shape, 64);
+    p1Geo.rotateX(Math.PI / 2); // Để nằm phẳng trên mặt phẳng XZ (y -> z)
+
+    // Ánh xạ UV chuẩn xác từng lỗ đục và viền đặc 2.5cm từ tấm phôi gốc (1000x3000mm)
+    // Miếng 1 cắt tại tọa độ originX = 0, originZ = -1.496 (-748mm)
+    function assignSheetCutUVsP1(geo) {
+      const pos = geo.attributes.position;
+      const uvs = [];
+      const originZ = -1.496;
+      for (let i = 0; i < pos.count; i++) {
+        const x_local = pos.getX(i);
+        const z_local = pos.getZ(i);
+        const x_sheet = x_local;
+        const z_sheet = originZ + z_local;
+        const u = (x_sheet / longW_scene) + 0.5;
+        const v = (z_sheet / longL_scene) + 0.5;
+        uvs.push(u, v);
+      }
+      geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    }
+    assignSheetCutUVsP1(p1Geo);
+
+    const p1Mat = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,
+      metalness: 0.8,
+      roughness: 0.25,
+      transparent: true,
+      opacity: 0.45,
+      side: THREE.DoubleSide
+    });
+    const p1Mesh = new THREE.Mesh(p1Geo, p1Mat);
+    p1Mesh.userData = { piece: "p1" };
+    p1Group.add(p1Mesh);
+
+    // Đường viền cắt laser Miếng 1
+    const p1Pts = [];
+    for (let i = 0; i <= 60; i++) {
+      const a = th_cut + (i / 60) * (Math.PI * 2 - 2 * th_cut);
+      const px = 0.5 + Math.cos(a) * R_cut;
+      const pz = Math.sin(a) * R_cut;
+      p1Pts.push(new THREE.Vector3(px, 0.0015, pz));
+    }
+    p1Pts.push(new THREE.Vector3(1.0, 0.0015, -chordHalfLen));
+    p1Pts.push(new THREE.Vector3(1.0, 0.0015, chordHalfLen));
+
+    const p1LineGeo = new THREE.BufferGeometry().setFromPoints(p1Pts);
+    const p1LineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 3 });
+    const p1Line = new THREE.LineLoop(p1LineGeo, p1LineMat);
+    p1Group.add(p1Line);
+
+    // Đường viền cắt laser cho lỗ tâm Ø40mm
+    const p1HolePts = [];
+    for (let i = 0; i <= 36; i++) {
+      const a = (i / 36) * Math.PI * 2;
+      p1HolePts.push(new THREE.Vector3(0.5 + Math.cos(a) * centerHoleRadius, 0.002, Math.sin(a) * centerHoleRadius));
+    }
+    const p1HoleLineGeo = new THREE.BufferGeometry().setFromPoints(p1HolePts);
+    const p1HoleLine = new THREE.LineLoop(p1HoleLineGeo, p1LineMat);
+    p1Group.add(p1HoleLine);
+
+    // Đường nét đứt giáp mí Miếng 1
+    const p1ChordGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(1.0, 0.002, -chordHalfLen),
+      new THREE.Vector3(1.0, 0.002, chordHalfLen)
+    ]);
+    const p1ChordMat = new THREE.LineDashedMaterial({ color: 0x0284c7, dashSize: 0.06, gapSize: 0.03 });
+    const p1ChordLine = new THREE.Line(p1ChordGeo, p1ChordMat);
+    p1ChordLine.computeLineDistances();
+    p1Group.add(p1ChordLine);
+
+    nestingGroup.add(p1Group);
+
+    // --- MIẾNG 2: KHỔ NHỎ 500mm ---
+    // Tâm hình học cục bộ đặt tại (0, 0): X từ -0.5 (mép giáp mí) đến +0.5 (đỉnh cung nhỏ)
+    const p2Group = new THREE.Group();
+    p2Group.name = "p2";
+
+    const p2Shape = new THREE.Shape();
+    p2Shape.absarc(-1.0, 0, R_cut, -th_cut, th_cut, false);
+    p2Shape.lineTo(-0.5, -chordHalfLen);
+
+    const p2Geo = new THREE.ShapeGeometry(p2Shape, 64);
+    p2Geo.rotateX(Math.PI / 2);
+
+    // Ánh xạ UV chuẩn xác từng lỗ đục và viền đặc 2.5cm từ tấm phôi gốc (1000x3000mm)
+    // Miếng 2 cắt tại tọa độ originX = -0.5 (-250mm), originZ = 0.744 (+372mm)
+    function assignSheetCutUVsP2(geo) {
+      const pos = geo.attributes.position;
+      const uvs = [];
+      const originX = -0.5;
+      const originZ = 0.744;
+      for (let i = 0; i < pos.count; i++) {
+        const x_local = pos.getX(i);
+        const z_local = pos.getZ(i);
+        const x_sheet = originX + x_local;
+        const z_sheet = originZ + z_local;
+        const u = (x_sheet / longW_scene) + 0.5;
+        const v = (z_sheet / longL_scene) + 0.5;
+        uvs.push(u, v);
+      }
+      geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    }
+    assignSheetCutUVsP2(p2Geo);
+
+    const p2Mat = new THREE.MeshStandardMaterial({
+      color: 0xd97706,
+      metalness: 0.8,
+      roughness: 0.25,
+      transparent: true,
+      opacity: 0.45,
+      side: THREE.DoubleSide
+    });
+    const p2Mesh = new THREE.Mesh(p2Geo, p2Mat);
+    p2Mesh.userData = { piece: "p2" };
+    p2Group.add(p2Mesh);
+
+    // Đường viền cắt laser Miếng 2
+    const p2Pts = [];
+    for (let i = 0; i <= 60; i++) {
+      const a = -th_cut + (i / 60) * (2 * th_cut);
+      const px = -1.0 + Math.cos(a) * R_cut;
+      const pz = Math.sin(a) * R_cut;
+      p2Pts.push(new THREE.Vector3(px, 0.0015, pz));
+    }
+    p2Pts.push(new THREE.Vector3(-0.5, 0.0015, chordHalfLen));
+    p2Pts.push(new THREE.Vector3(-0.5, 0.0015, -chordHalfLen));
+
+    const p2LineGeo = new THREE.BufferGeometry().setFromPoints(p2Pts);
+    const p2LineMat = new THREE.LineBasicMaterial({ color: 0xfbbf24, linewidth: 3 });
+    const p2Line = new THREE.LineLoop(p2LineGeo, p2LineMat);
+    p2Group.add(p2Line);
+
+    // Đường nét đứt giáp mí Miếng 2
+    const p2ChordGeo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-0.5, 0.002, -chordHalfLen),
+      new THREE.Vector3(-0.5, 0.002, chordHalfLen)
+    ]);
+    const p2ChordMat = new THREE.LineDashedMaterial({ color: 0xd97706, dashSize: 0.06, gapSize: 0.03 });
+    const p2ChordLine = new THREE.Line(p2ChordGeo, p2ChordMat);
+    p2ChordLine.computeLineDistances();
+    p2Group.add(p2ChordLine);
+
+    nestingGroup.add(p2Group);
+
+    // VỊ TRÍ XẾP PHÔI CHUẨN TỐI ƯU CỐ ĐỊNH TRÊN TẤM PHÔI
+    // Miếng 1 (To 1000mm): Mép thẳng ở bên phải, đỉnh trên cách mép trên tấm 2mm
+    p1Group.position.set(0, plateTopY, -1.496);
+    p1Group.rotation.y = 0;
+
+    // Miếng 2 (Nhỏ 500mm): Mép thẳng ở bên trái, lồng sát cung Miếng 1 với khe hở laser 1.5mm
+    p2Group.position.set(-0.5, plateTopY, 0.744);
+    p2Group.rotation.y = 0;
+
+    // MÔ HÌNH RÁP 2 MIẾNG THÀNH HÌNH TRÒN ĐỐI CHIẾU TRỰC TIẾP TỪ 2 MIẾNG ĐÃ CẮT
+    const joinPreviewGroup = new THREE.Group();
+
+    // 1. Miếng 1 (To 1000mm) sau khi cắt đưa vào ghép bên trái:
+    // Dùng trực tiếp vật liệu tôn phôi longInoxMaterial với đúng lỗ đục và viền đặc 2.5cm thực tế
+    const jp1 = new THREE.Mesh(p1Geo, longInoxMaterial);
+    jp1.position.set(-0.5, longT_scene / 2 + 0.002, 0);
+    joinPreviewGroup.add(jp1);
+
+    const jp1Line = new THREE.LineLoop(p1LineGeo, p1LineMat);
+    jp1Line.position.set(-0.5, longT_scene / 2 + 0.003, 0);
+    joinPreviewGroup.add(jp1Line);
+
+    const jpHoleLine = new THREE.LineLoop(p1HoleLineGeo, p1LineMat);
+    jpHoleLine.position.set(-0.5, longT_scene / 2 + 0.003, 0);
+    joinPreviewGroup.add(jpHoleLine);
+
+    // 2. Miếng 2 (Nhỏ 500mm) sau khi cắt đưa vào ghép bên phải:
+    // Dùng trực tiếp vật liệu tôn phôi longInoxMaterial với đúng lỗ đục và viền đặc 2.5cm thực tế
+    const jp2 = new THREE.Mesh(p2Geo, longInoxMaterial);
+    jp2.position.set(1.0, longT_scene / 2 + 0.002, 0);
+    joinPreviewGroup.add(jp2);
+
+    const jp2Line = new THREE.LineLoop(p2LineGeo, p2LineMat);
+    jp2Line.position.set(1.0, longT_scene / 2 + 0.003, 0);
+    joinPreviewGroup.add(jp2Line);
+
+    // 3. Đường hàn TIG liên kết 2 miếng (tại X = +0.5 = +250mm, dài 1414.2mm, nằm giữa dải tôn đặc 5cm)
+    const jpWeld = new THREE.Mesh(seamWeldGeo, seamWeldMat);
+    jpWeld.rotation.x = Math.PI / 2;
+    jpWeld.position.set(0.5, longT_scene / 2 + 0.004, 0);
+    joinPreviewGroup.add(jpWeld);
+
+    // 4. Cặp thanh giằng dọc giữa (lọt lòng 20cm kẹp giữa lỗ tâm Ø40mm)
+    const jpTubeLeft = new THREE.Mesh(tubeGeoLeft, supportTubeMat);
+    jpTubeLeft.position.y = longT_scene / 2 + 0.002;
+    joinPreviewGroup.add(jpTubeLeft);
+    const jpEdgesLeft = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoLeft), supportEdgeMat);
+    jpEdgesLeft.position.y = longT_scene / 2 + 0.002;
+    joinPreviewGroup.add(jpEdgesLeft);
+
+    const jpTubeRight = new THREE.Mesh(tubeGeoRight, supportTubeMat);
+    jpTubeRight.position.y = longT_scene / 2 + 0.002;
+    joinPreviewGroup.add(jpTubeRight);
+    const jpEdgesRight = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoRight), supportEdgeMat);
+    jpEdgesRight.position.y = longT_scene / 2 + 0.002;
+    joinPreviewGroup.add(jpEdgesRight);
+
+    // Cặp thanh giằng dọc trung gian (cách thanh giữa lọt lòng 20cm, mặt trong tại X = ±320mm)
+    const jpTubeLeftInt = new THREE.Mesh(tubeGeoLeftInt, supportTubeMat);
+    jpTubeLeftInt.position.y = longT_scene / 2 + 0.002;
+    joinPreviewGroup.add(jpTubeLeftInt);
+    const jpEdgesLeftInt = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoLeftInt), supportEdgeMat);
+    jpEdgesLeftInt.position.y = longT_scene / 2 + 0.002;
+    joinPreviewGroup.add(jpEdgesLeftInt);
+
+    const jpTubeRightInt = new THREE.Mesh(tubeGeoRightInt, supportTubeMat);
+    jpTubeRightInt.position.y = longT_scene / 2 + 0.002;
+    joinPreviewGroup.add(jpTubeRightInt);
+    const jpEdgesRightInt = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoRightInt), supportEdgeMat);
+    jpEdgesRightInt.position.y = longT_scene / 2 + 0.002;
+    joinPreviewGroup.add(jpEdgesRightInt);
+
+    // Cặp thanh giằng dọc ngoài (cách thanh trung gian lọt lòng 20cm, mặt trong tại X = ±540mm)
+    const jpTubeLeftOut = new THREE.Mesh(tubeGeoLeftOut, supportTubeMat);
+    jpTubeLeftOut.position.y = longT_scene / 2 + 0.002;
+    joinPreviewGroup.add(jpTubeLeftOut);
+    const jpEdgesLeftOut = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoLeftOut), supportEdgeMat);
+    jpEdgesLeftOut.position.y = longT_scene / 2 + 0.002;
+    joinPreviewGroup.add(jpEdgesLeftOut);
+
+    const jpTubeRightOut = new THREE.Mesh(tubeGeoRightOut, supportTubeMat);
+    jpTubeRightOut.position.y = longT_scene / 2 + 0.002;
+    joinPreviewGroup.add(jpTubeRightOut);
+    const jpEdgesRightOut = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoRightOut), supportEdgeMat);
+    jpEdgesRightOut.position.y = longT_scene / 2 + 0.002;
+    joinPreviewGroup.add(jpEdgesRightOut);
+
+    // 5. Sáu thanh giằng ngang ở giữa (dài 199.8mm, hở 0.1mm) tạo ô 20x20cm
+    crossPositionsZ_col0.forEach(zVal => {
+      const jpCross = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      jpCross.position.set(0, longT_scene / 2 + 0.002, zVal);
+      joinPreviewGroup.add(jpCross);
+
+      const jpCrossEdges = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      jpCrossEdges.position.set(0, longT_scene / 2 + 0.002, zVal);
+      joinPreviewGroup.add(jpCrossEdges);
+    });
+
+    // Mười thanh giằng ngang ở 2 bên trung gian (dài 199.8mm, hở 0.1mm) xen kẽ
+    crossPositionsZ_col1.forEach(zVal => {
+      // Bên trái trung gian
+      const jpCrossL = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      jpCrossL.position.set(sqCrossX_intL, longT_scene / 2 + 0.002, zVal);
+      joinPreviewGroup.add(jpCrossL);
+      const jpCrossEdgesL = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      jpCrossEdgesL.position.set(sqCrossX_intL, longT_scene / 2 + 0.002, zVal);
+      joinPreviewGroup.add(jpCrossEdgesL);
+
+      // Bên phải trung gian
+      const jpCrossR = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      jpCrossR.position.set(sqCrossX_intR, longT_scene / 2 + 0.002, zVal);
+      joinPreviewGroup.add(jpCrossR);
+      const jpCrossEdgesR = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      jpCrossEdgesR.position.set(sqCrossX_intR, longT_scene / 2 + 0.002, zVal);
+      joinPreviewGroup.add(jpCrossEdgesR);
+    });
+
+    // Tám thanh giằng ngang ở 2 bên ngoài (dài 199.8mm, hở 0.1mm) xen kẽ
+    crossPositionsZ_col2.forEach(zVal => {
+      // Bên trái ngoài
+      const jpCrossOutL = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      jpCrossOutL.position.set(sqCrossX_outL, longT_scene / 2 + 0.002, zVal);
+      joinPreviewGroup.add(jpCrossOutL);
+      const jpCrossEdgesOutL = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      jpCrossEdgesOutL.position.set(sqCrossX_outL, longT_scene / 2 + 0.002, zVal);
+      joinPreviewGroup.add(jpCrossEdgesOutL);
+
+      // Bên phải ngoài
+      const jpCrossOutR = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      jpCrossOutR.position.set(sqCrossX_outR, longT_scene / 2 + 0.002, zVal);
+      joinPreviewGroup.add(jpCrossOutR);
+      const jpCrossEdgesOutR = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      jpCrossEdgesOutR.position.set(sqCrossX_outR, longT_scene / 2 + 0.002, zVal);
+      joinPreviewGroup.add(jpCrossEdgesOutR);
+    });
+
+    // Mười thanh giằng cánh cung ngoài cùng chống ra vách bồn cong
+    rimPositionsZ.forEach((_, idx) => {
+      // Bên trái
+      const jpRimMeshL = new THREE.Mesh(rimGeosLeft[idx], supportTubeMat);
+      jpRimMeshL.position.y = longT_scene / 2 + 0.002;
+      joinPreviewGroup.add(jpRimMeshL);
+      const jpRimEdgeL = new THREE.LineSegments(rimEdgesLeft[idx], supportEdgeMat);
+      jpRimEdgeL.position.y = longT_scene / 2 + 0.002;
+      joinPreviewGroup.add(jpRimEdgeL);
+
+      // Bên phải
+      const jpRimMeshR = new THREE.Mesh(rimGeosRight[idx], supportTubeMat);
+      jpRimMeshR.position.y = longT_scene / 2 + 0.002;
+      joinPreviewGroup.add(jpRimMeshR);
+      const jpRimEdgeR = new THREE.LineSegments(rimEdgesRight[idx], supportEdgeMat);
+      jpRimEdgeR.position.y = longT_scene / 2 + 0.002;
+      joinPreviewGroup.add(jpRimEdgeR);
+    });
+
+    joinPreviewGroup.visible = false;
+    detailMeshGroup.add(joinPreviewGroup);
+
+    detailMeshGroup.visible = false;
+    scene.add(detailMeshGroup);
+
+    // ==========================================
+    // NHÓM 2C: HỘP INOX VUÔNG 2CM RỖNG RUỘT (20 x 20 x 1.0mm, DÀI 20M)
+    // ==========================================
+    const detailSquareGroup = new THREE.Group();
+
+    const sqOut = PARAMS.squareSize * PARAMS.scale;      // 20mm = 0.04 units
+    const sqThick = PARAMS.squareWall * PARAMS.scale;    // 1.0mm = 0.002 units
+    const sqIn = sqOut - 2 * sqThick;                    // 18mm = 0.036 units
+    const sqL = PARAMS.squareLen * PARAMS.scale;         // 20,000mm = 40.0 units
+
+    // Biên dạng tiết diện hộp vuông rỗng ruột (Vỏ ngoài 20x20mm, lòng trong 18x18mm)
+    const tubeShape = new THREE.Shape();
+    const halfOut = sqOut / 2;
+    tubeShape.moveTo(-halfOut, -halfOut);
+    tubeShape.lineTo(halfOut, -halfOut);
+    tubeShape.lineTo(halfOut, halfOut);
+    tubeShape.lineTo(-halfOut, halfOut);
+    tubeShape.closePath();
+
+    const tubeHole = new THREE.Path();
+    const halfIn = sqIn / 2;
+    tubeHole.moveTo(-halfIn, -halfIn);
+    tubeHole.lineTo(-halfIn, halfIn);
+    tubeHole.lineTo(halfIn, halfIn);
+    tubeHole.lineTo(halfIn, -halfIn);
+    tubeHole.closePath();
+    tubeShape.holes.push(tubeHole);
+
+    // Extrude thành thanh hộp vuông rỗng ruột dài 20m
+    const tubeGeo = new THREE.ExtrudeGeometry(tubeShape, { depth: sqL, bevelEnabled: false });
+    tubeGeo.center();
+
+    const tubeMat = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0,
+      metalness: 0.95,
+      roughness: 0.16,
+      side: THREE.DoubleSide
+    });
+    const tubeMesh = new THREE.Mesh(tubeGeo, tubeMat);
+    tubeMesh.position.y = halfOut;
+    detailSquareGroup.add(tubeMesh);
+
+    // Viền xanh cyan để làm nổi bật thành hộp 1.0mm và lòng trong rỗng 18x18mm
+    const sqEdgesGeo = new THREE.EdgesGeometry(tubeGeo);
+    const sqEdgesMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, linewidth: 2 });
+    const sqEdges = new THREE.LineSegments(sqEdgesGeo, sqEdgesMat);
+    sqEdges.position.y = halfOut;
+    detailSquareGroup.add(sqEdges);
+
+    // Các vạch cữ khoảng cách mỗi 1m (1000mm = 2 scene units)
+    const markerMat = new THREE.LineBasicMaterial({ color: 0x475569, transparent: true, opacity: 0.6 });
+    for (let z = -sqL / 2; z <= sqL / 2; z += (1000 * PARAMS.scale)) {
+      const markerGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(-sqOut * 2, halfOut, z),
+        new THREE.Vector3(sqOut * 2, halfOut, z)
+      ]);
+      const markerLine = new THREE.Line(markerGeo, markerMat);
+      detailSquareGroup.add(markerLine);
+    }
+
+    // 2 thanh dọc giữa cắt thực tế (L = 1484.4mm, lọt lòng 20cm kẹp giữa lỗ Ø40mm, gọt xéo 2 đầu khe hở 0.1mm)
+    const cutPieceLeftMid = new THREE.Mesh(tubeGeoLeft, supportTubeMat);
+    cutPieceLeftMid.position.set(-sqDistX_mid, halfOut + 0.05, 0);
+    detailSquareGroup.add(cutPieceLeftMid);
+    const cutEdgesLeftMid = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoLeft), supportEdgeMat);
+    cutEdgesLeftMid.position.set(-sqDistX_mid, halfOut + 0.05, 0);
+    detailSquareGroup.add(cutEdgesLeftMid);
+
+    const cutPieceRightMid = new THREE.Mesh(tubeGeoRight, supportTubeMat);
+    cutPieceRightMid.position.set(sqDistX_mid, halfOut + 0.05, 0);
+    detailSquareGroup.add(cutPieceRightMid);
+    const cutEdgesRightMid = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoRight), supportEdgeMat);
+    cutEdgesRightMid.position.set(sqDistX_mid, halfOut + 0.05, 0);
+    detailSquareGroup.add(cutEdgesRightMid);
+
+    // 2 thanh dọc trung gian cắt thực tế (L = 1354.2mm, cách thanh giữa lọt lòng 20cm, gọt xéo 2 đầu khe hở 0.1mm)
+    const cutPieceLeftInt = new THREE.Mesh(tubeGeoLeftInt, supportTubeMat);
+    cutPieceLeftInt.position.set(-sqDistX_int, halfOut + 0.05, 0);
+    detailSquareGroup.add(cutPieceLeftInt);
+    const cutEdgesLeftInt = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoLeftInt), supportEdgeMat);
+    cutEdgesLeftInt.position.set(-sqDistX_int, halfOut + 0.05, 0);
+    detailSquareGroup.add(cutEdgesLeftInt);
+
+    const cutPieceRightInt = new THREE.Mesh(tubeGeoRightInt, supportTubeMat);
+    cutPieceRightInt.position.set(sqDistX_int, halfOut + 0.05, 0);
+    detailSquareGroup.add(cutPieceRightInt);
+    const cutEdgesRightInt = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoRightInt), supportEdgeMat);
+    cutEdgesRightInt.position.set(sqDistX_int, halfOut + 0.05, 0);
+    detailSquareGroup.add(cutEdgesRightInt);
+
+    // 2 thanh dọc ngoài cắt thực tế (L = 1037.8mm, cách thanh trung gian lọt lòng 20cm, gọt xéo 2 đầu khe hở 0.1mm)
+    const cutPieceLeftOut = new THREE.Mesh(tubeGeoLeftOut, supportTubeMat);
+    cutPieceLeftOut.position.set(-sqDistX_out, halfOut + 0.05, 0);
+    detailSquareGroup.add(cutPieceLeftOut);
+    const cutEdgesLeftOut = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoLeftOut), supportEdgeMat);
+    cutEdgesLeftOut.position.set(-sqDistX_out, halfOut + 0.05, 0);
+    detailSquareGroup.add(cutEdgesLeftOut);
+
+    const cutPieceRightOut = new THREE.Mesh(tubeGeoRightOut, supportTubeMat);
+    cutPieceRightOut.position.set(sqDistX_out, halfOut + 0.05, 0);
+    detailSquareGroup.add(cutPieceRightOut);
+    const cutEdgesRightOut = new THREE.LineSegments(new THREE.EdgesGeometry(tubeGeoRightOut), supportEdgeMat);
+    cutEdgesRightOut.position.set(sqDistX_out, halfOut + 0.05, 0);
+    detailSquareGroup.add(cutEdgesRightOut);
+
+    // 6 thanh giằng ngang giữa cắt thực tế (L = 199.8mm, hở 0.1mm) tạo ô lưới 20x20cm
+    crossPositionsZ_col0.forEach(zVal => {
+      const cutCross = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      cutCross.position.set(0, halfOut + 0.05, zVal);
+      detailSquareGroup.add(cutCross);
+      const cutCrossEdges = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      cutCrossEdges.position.set(0, halfOut + 0.05, zVal);
+      detailSquareGroup.add(cutCrossEdges);
+    });
+
+    // 10 thanh giằng ngang trung gian cắt thực tế (L = 199.8mm, hở 0.1mm) xen kẽ
+    crossPositionsZ_col1.forEach(zVal => {
+      // Bên trái trung gian
+      const cutCrossL = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      cutCrossL.position.set(sqCrossX_intL, halfOut + 0.05, zVal);
+      detailSquareGroup.add(cutCrossL);
+      const cutCrossEdgesL = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      cutCrossEdgesL.position.set(sqCrossX_intL, halfOut + 0.05, zVal);
+      detailSquareGroup.add(cutCrossEdgesL);
+
+      // Bên phải trung gian
+      const cutCrossR = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      cutCrossR.position.set(sqCrossX_intR, halfOut + 0.05, zVal);
+      detailSquareGroup.add(cutCrossR);
+      const cutCrossEdgesR = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      cutCrossEdgesR.position.set(sqCrossX_intR, halfOut + 0.05, zVal);
+      detailSquareGroup.add(cutCrossEdgesR);
+    });
+
+    // 8 thanh giằng ngang ngoài cắt thực tế (L = 199.8mm, hở 0.1mm) xen kẽ
+    crossPositionsZ_col2.forEach(zVal => {
+      // Bên trái ngoài
+      const cutCrossOutL = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      cutCrossOutL.position.set(sqCrossX_outL, halfOut + 0.05, zVal);
+      detailSquareGroup.add(cutCrossOutL);
+      const cutCrossEdgesOutL = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      cutCrossEdgesOutL.position.set(sqCrossX_outL, halfOut + 0.05, zVal);
+      detailSquareGroup.add(cutCrossEdgesOutL);
+
+      // Bên phải ngoài
+      const cutCrossOutR = new THREE.Mesh(crossTubeGeo, supportTubeMat);
+      cutCrossOutR.position.set(sqCrossX_outR, halfOut + 0.05, zVal);
+      detailSquareGroup.add(cutCrossOutR);
+      const cutCrossEdgesOutR = new THREE.LineSegments(crossEdgesGeo, supportEdgeMat);
+      cutCrossEdgesOutR.position.set(sqCrossX_outR, halfOut + 0.05, zVal);
+      detailSquareGroup.add(cutCrossEdgesOutR);
+    });
+
+    // Mười thanh giằng cánh cung ngoài cùng cắt thực tế chống ra vách bồn
+    rimPositionsZ.forEach((_, idx) => {
+      // Bên trái
+      const cutRimMeshL = new THREE.Mesh(rimGeosLeft[idx], supportTubeMat);
+      cutRimMeshL.position.y = halfOut + 0.05;
+      detailSquareGroup.add(cutRimMeshL);
+      const cutRimEdgeL = new THREE.LineSegments(rimEdgesLeft[idx], supportEdgeMat);
+      cutRimEdgeL.position.y = halfOut + 0.05;
+      detailSquareGroup.add(cutRimEdgeL);
+
+      // Bên phải
+      const cutRimMeshR = new THREE.Mesh(rimGeosRight[idx], supportTubeMat);
+      cutRimMeshR.position.y = halfOut + 0.05;
+      detailSquareGroup.add(cutRimMeshR);
+      const cutRimEdgeR = new THREE.LineSegments(rimEdgesRight[idx], supportEdgeMat);
+      cutRimEdgeR.position.y = halfOut + 0.05;
+      detailSquareGroup.add(cutRimEdgeR);
+    });
+
+    // Lưới mặt bằng tham chiếu tỷ lệ dài 20m
+    const sqGrid = new THREE.GridHelper(sqL + 4, 40, 0x334155, 0x1e293b);
+    sqGrid.position.set(0, 0, 0);
+    detailSquareGroup.add(sqGrid);
+
+    detailSquareGroup.visible = false;
+    scene.add(detailSquareGroup);
+
+    // --- 5. LOGIC CHUYỂN ĐỔI TAB & PANEL ---
+    let currentMainTab = "machine";
+    let currentDetailItem = "gold";
+    let joinPreviewActive = false;
+
+    window.switchMainTab = function(tab) {
+      currentMainTab = tab;
+      const btnMachine = document.getElementById("tab-machine");
+      const btnDetail = document.getElementById("tab-detail");
+      const subNav = document.getElementById("sub-nav");
+      const actionNav = document.getElementById("action-nav");
+      const badgeTitle = document.getElementById("badge-title");
+      const badgeSpec = document.getElementById("badge-spec");
+
+      if (tab === "machine") {
+        btnMachine.classList.add("active");
+        btnDetail.classList.remove("active");
+        subNav.style.display = "none";
+        actionNav.style.display = "none";
+
+        machineGroup.visible = true;
+        detailGoldGroup.visible = false;
+        detailMeshGroup.visible = false;
+        detailSquareGroup.visible = false;
+
+        badgeTitle.innerText = "Cụm Máy Bồn Làm Mát";
+        badgeSpec.innerText = "Ø1500 x 625 x 1.0mm";
+
+        camera.up.set(0, 1, 0);
+        controls.enableRotate = true;
+        camera.position.set(2.4, 2.0, 3.0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+      } else {
+        btnDetail.classList.add("active");
+        btnMachine.classList.remove("active");
+        subNav.style.display = "flex";
+
+        machineGroup.visible = false;
+        switchDetailItem(currentDetailItem);
+      }
+    };
+
+    window.switchDetailItem = function(item) {
+      currentDetailItem = item;
+      const btnGold = document.getElementById("sub-gold");
+      const btnMesh = document.getElementById("sub-mesh");
+      const btnSquare = document.getElementById("sub-square");
+      const actionNav = document.getElementById("action-nav");
+      const badgeTitle = document.getElementById("badge-title");
+      const badgeSpec = document.getElementById("badge-spec");
+
+      if (btnGold) btnGold.classList.toggle("active", item === "gold");
+      if (btnMesh) btnMesh.classList.toggle("active", item === "mesh");
+      if (btnSquare) btnSquare.classList.toggle("active", item === "square");
+
+      detailGoldGroup.visible = (item === "gold");
+      detailMeshGroup.visible = (item === "mesh");
+      detailSquareGroup.visible = (item === "square");
+
+      if (item === "gold") {
+        actionNav.style.display = "none";
+
+        badgeTitle.innerText = "Phôi Tấm Inox Vàng (Vỏ Bồn)";
+        badgeSpec.innerText = "4712 x 625 x 1.0mm (Khổ cuộn 125cm xẻ đôi)";
+
+        camera.up.set(0, 1, 0);
+        controls.enableRotate = true;
+        camera.position.set(0, 4.0, 5.0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+      } else if (item === "mesh") {
+        actionNav.style.display = "flex";
+
+        badgeTitle.innerText = "Tấm Inox Lưới Đục Lỗ (1000 x 3000mm)";
+        badgeSpec.innerText = "Xếp phôi chuẩn xưởng: Miếng 1000mm + Miếng 500mm | Dư 423mm phôi nguyên";
+
+        controls.target.set(0, 0, 0);
+        camera.position.set(0, 6.2, 0.0001);
+        camera.up.set(0, 0, -1);
+        controls.update();
+      } else if (item === "square") {
+        actionNav.style.display = "none";
+
+        badgeTitle.innerText = "Hộp Inox Vuông Ngoài Tiệm (Rỗng Ruột)";
+        badgeSpec.innerText = "Khổ 20m phôi nguyên | Cắt: 6 cây dọc (1484mm, 1354mm, 1038mm) + 32 cây ngang 199.8mm + 6 thanh giằng cánh cung (190mm, 163mm) | Tổng cắt: 15.18m | Dư: 4.82m";
+
+        camera.up.set(0, 1, 0);
+        controls.enableRotate = true;
+        camera.position.set(1.8, 1.4, 3.6);
+        controls.target.set(0, halfOut + 0.03, 0);
+        controls.update();
+      }
+    };
+
+    window.toggleJoinPreview = function() {
+      joinPreviewActive = !joinPreviewActive;
+      const btn = document.getElementById("btn-toggle-join");
+      btn.classList.toggle("active", joinPreviewActive);
+
+      if (joinPreviewActive) {
+        longPlateMesh.visible = false;
+        nestingGroup.visible = false;
+        joinPreviewGroup.visible = true;
+        btn.innerText = "↩ Quay Lại Tấm Phôi Xếp Lưới";
+
+        camera.up.set(0, 0, -1);
+        camera.position.set(0, 3.8, 0.0001);
+        controls.target.set(0, 0, 0);
+        controls.update();
+      } else {
+        longPlateMesh.visible = true;
+        nestingGroup.visible = true;
+        joinPreviewGroup.visible = false;
+        btn.innerText = "🔗 Xem Ghép 2 Tấm Tròn (Ø1500mm)";
+
+        camera.up.set(0, 0, -1);
+        camera.position.set(0, 6.2, 0.0001);
+        controls.target.set(0, 0, 0);
+        controls.update();
+      }
+    };
+
+    // --- 9. MENU 3 GẠCH & CHẾ ĐỘ 2D / 3D ---
+    let menuOpen = false;
+    window.toggleMenu = function() {
+      menuOpen = !menuOpen;
+      const sidebar = document.getElementById("sidebar");
+      const overlay = document.getElementById("overlay");
+      if (menuOpen) {
+        sidebar.classList.add("open");
+        overlay.classList.add("active");
+      } else {
+        sidebar.classList.remove("open");
+        overlay.classList.remove("active");
+      }
+    };
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && menuOpen) toggleMenu();
+    });
+
+    let currentMode = "3d";
+    window.setMode = function(mode) {
+      currentMode = mode;
+      const btn3D = document.getElementById("btn-3d");
+      const btn2D = document.getElementById("btn-2d");
+
+      if (mode === "2d") {
+        btn2D.classList.add("active");
+        btn3D.classList.remove("active");
+        controls.enableRotate = false;
+        controls.mouseButtons.LEFT = THREE.MOUSE.PAN;
+        controls.target.set(0, 0, 0);
+        camera.position.set(0, 6.2, 0.0001);
+        camera.up.set(0, 0, -1);
+        controls.update();
+      } else {
+        btn3D.classList.add("active");
+        btn2D.classList.remove("active");
+        controls.enableRotate = true;
+        controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+        controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+        controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN;
+        camera.up.set(0, 1, 0);
+        camera.position.set(2.4, 2.0, 3.0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+      }
+      toggleMenu();
+    };
+
+    window.fitView = function() {
+      controls.target.set(0, 0, 0);
+      if (currentMode === "2d") {
+        camera.position.set(0, 6.2, 0.0001);
+        camera.up.set(0, 0, -1);
+      } else {
+        camera.position.set(2.4, 2.0, 3.0);
+        camera.up.set(0, 1, 0);
+      }
+      controls.update();
+      toggleMenu();
+    };
+
+    window.setViewTop = function() {
+      setMode("2d");
+    };
+
+    window.setViewIso = function() {
+      setMode("3d");
+      camera.up.set(0, 1, 0);
+      camera.position.set(2.4, 2.5, 2.8);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    };
+
+    // --- 10. RENDER LOOP ---
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
